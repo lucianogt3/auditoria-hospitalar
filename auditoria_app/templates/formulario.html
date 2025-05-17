@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulário de Auditoria Hospitalar</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.05);
+      max-width: 1400px;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 30px;
+    }
+    th {
+      background-color: #e9ecef;
+      text-align: center;
+    }
+    .form-label {
+      font-weight: bold;
+    }
+    .valor[data-tipo="glosa_medico"],
+    .valor[data-tipo="glosa_enfermagem"] {
+      color: red;
+      font-weight: bold;
+    }
+    th:first-child,
+    td:first-child input {
+      min-width: 200px;
+      text-align: left;
+    }
+    .botoes-navegacao {
+      margin-top: 30px;
+      padding: 15px 0;
+      border-top: 1px solid #dee2e6;
+    }
+    .valor {
+      text-align: right;
+    }
+    .btn-navegacao {
+      min-width: 120px;
+    }
+  </style>
+</head>
+<script>
+function parseValor(valor) {
+  if (!valor) return 0;
+  return parseFloat(valor.replace(/[^\d,-]/g, '').replace('.', '').replace(',', '.')) || 0;
+}
+
+function formatarMoeda(valor) {
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function atualizarTotais() {
+  let totalApresentado = 0;
+  let totalGlosaMedico = 0;
+  let totalGlosaEnfermagem = 0;
+  let totalLiberado = 0;
+
+  document.querySelectorAll("#tabela-despesas tbody tr").forEach(row => {
+    const inputApresentado = row.querySelector('[name^="valor_apresentado_"]');
+    const inputGlosaMedico = row.querySelector('[name^="glosa_medico_"]');
+    const inputGlosaEnfermagem = row.querySelector('[name^="glosa_enfermagem_"]');
+    const inputLiberado = row.querySelector('[name^="valor_liberado_"]');
+
+    const valorApresentado = parseValor(inputApresentado.value);
+    const valorGlosaMedico = parseValor(inputGlosaMedico.value);
+    const valorGlosaEnfermagem = parseValor(inputGlosaEnfermagem.value);
+    const valorLiberado = valorApresentado - valorGlosaMedico - valorGlosaEnfermagem;
+
+    inputLiberado.value = (inputApresentado.value || inputGlosaMedico.value || inputGlosaEnfermagem.value)
+  ? formatarMoeda(valorLiberado)
+  : '';
+
+    totalApresentado += valorApresentado;
+    totalGlosaMedico += valorGlosaMedico;
+    totalGlosaEnfermagem += valorGlosaEnfermagem;
+    totalLiberado += valorLiberado;
+  });
+
+  document.querySelector('[name="total_apresentado"]').value = formatarMoeda(totalApresentado);
+  document.querySelector('[name="total_glosa_medico"]').value = formatarMoeda(totalGlosaMedico);
+  document.querySelector('[name="total_glosa_enfermagem"]').value = formatarMoeda(totalGlosaEnfermagem);
+  document.querySelector('[name="total_liberado"]').value = formatarMoeda(totalLiberado);
+}
+
+document.addEventListener('input', function (e) {
+  if (e.target.matches('[name^="valor_apresentado_"], [name^="glosa_medico_"], [name^="glosa_enfermagem_"]')) {
+    atualizarTotais();
+  }
+});
+
+window.addEventListener('DOMContentLoaded', atualizarTotais);
+</script>
+
+<script>
+function formatarCampoMoeda(campo) {
+  const valor = parseValor(campo.value);
+  if (!isNaN(valor) && campo.value.trim() !== '') {
+    campo.value = formatarMoeda(valor);
+  }
+}
+
+document.addEventListener('blur', function (e) {
+  if (e.target.matches('[name^="valor_apresentado_"], [name^="glosa_medico_"], [name^="glosa_enfermagem_"]')) {
+    formatarCampoMoeda(e.target);
+  }
+}, true); // useCapture = true para capturar no momento de "bubbling"
+</script>
+ 
+<body>
+  <div class="container">
+    <h1>Formulário de Auditoria Hospitalar</h1>
+    <form method="POST" action="/salvar">
+      <!-- Campos iniciais do formulário -->
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Nome Prestador</label>
+          <select id="select_prestador" name="nome_prestador" class="form-select" required>
+            <option value="">Selecione o prestador</option>
+          </select>       
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Código Prestador</label>
+          <input type="text" id="cod_prestador" name="cod_prestador" class="form-control" readonly value="{{ registro.cod_prestador if registro else '' }}">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Nome do Beneficiário</label>
+          <input type="text" name="nome_beneficiario" class="form-control" value="{{ registro.nome_beneficiario if registro else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Código Beneficiário</label>
+          <input type="text" name="cod_beneficiario" class="form-control" value="{{ registro.cod_beneficiario if registro else '' }}">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Nº guia principal</label>
+          <input type="text" name="guia_principal" class="form-control" value="{{ registro.guia_principal if registro else '' }}">
+        </div>
+        <div class="col-md-6">
+  <label class="form-label">Data da auditoria</label>
+  <input type="date" name="data_auditoria" class="form-control"
+       value="{{ registro.data_auditoria.strftime('%Y-%m-%d') if registro and registro.data_auditoria else '' }}">
+
+</div>
+
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Data e hora internação</label>
+         <input type="datetime-local" id="data_internacao" name="data_internacao" class="form-control"
+value="{{ registro.data_internacao.strftime('%Y-%m-%dT%H:%M') if registro and registro.data_internacao and registro.data_internacao.strftime else registro.data_internacao if registro and registro.data_internacao else '' }}">
+
+
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Data e hora alta</label>
+         <input type="datetime-local" id="data_alta" name="data_alta" class="form-control"
+value="{{ registro.data_alta.strftime('%Y-%m-%dT%H:%M') if registro and registro.data_alta and registro.data_alta.strftime else registro.data_alta if registro and registro.data_alta else '' }}">
+
+
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Tipo internação</label><br>
+          {% for tipo in ['Clínica', 'Cirúrgica', 'Pediátrica', 'Obstétrica', 'Psiquiátrica'] %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="tipo_internacao" value="{{ tipo }}" {% if registro and registro.tipo_internacao == tipo %}checked{% endif %}> {{ tipo }}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Caráter internação</label><br>
+          {% for carater in ['Eletivo', 'Urgência', 'Emergência'] %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="carater_internacao[]" value="{{ carater }}" {% if registro and carater in (registro.carater_internacao or []) %}checked{% endif %}> {{ carater }}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-12">
+          <label class="form-label">Parcial</label><br>
+          {% for opcao in ['Não', 'Parcial', 'Inicial', 'Final'] %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="parcial" value="{{ opcao }}" {% if registro and registro.parcial == opcao %}checked{% endif %}> {{ opcao }}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Período da fatura - Início</label>
+          <input type="date" id="periodo_inicio" name="periodo_fatura_inicio" class="form-control" value="{{ registro.fatura_de.strftime('%Y-%m-%d') if registro and registro.fatura_de else '' }}">
+
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Período da fatura - Fim</label>
+        <input type="date" id="periodo_fim" name="periodo_fatura_fim" class="form-control" value="{{ registro.fatura_ate.strftime('%Y-%m-%d') if registro and registro.fatura_ate else '' }}">
+
+        </div>
+      </div>
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <label class="form-label">Cód. Proced. principal</label>
+          <input type="text" name="cod_procedimento" class="form-control" value="{{ registro.cod_procedimento if registro else '' }}">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Descrição procedimento principal</label>
+          <input type="text" name="descricao_procedimento" class="form-control" value="{{ registro.descricao_procedimento if registro else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">CID diagnóstico principal</label>
+          <input type="text" name="cid" class="form-control" value="{{ registro.cid if registro else '' }}">
+        </div>
+      </div>
+
+  <!-- GRUPO DE DESPESAS -->
+<table class="table table-bordered align-middle" id="tabela-despesas">
+  <thead>
+    <tr class="table-secondary">
+      <th>Grupo de Despesas</th>
+      <th>Qtd. Apresentada</th>
+      <th>Qtd. Autorizada</th>
+      <th>Valor Apresentado (R$)</th>
+      <th>Glosa Médica (R$)</th>
+      <th>Glosa Enfermagem (R$)</th>
+      <th>Valor Liberado (R$)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if grupos_despesa %}
+    {% for grupo in grupos_despesa %}
+    <tr>
+      <td><input type="text" name="grupo_{{ grupo.indice }}" class="form-control" value="{{ grupo.grupo }}"></td>
+      <td><input type="text" name="qtd_apresentada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_apresentada or 'N/A' }}"></td>
+      <td><input type="text" name="qtd_autorizada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_autorizada or 'N/A' }}"></td>
+      <td><input type="text" name="valor_apresentado_{{ grupo.indice }}" class="form-control valor" value="{{ grupo.valor_apresentado }}"></td>
+      <td><input type="text" name="glosa_medico_{{ grupo.indice }}" class="form-control valor glosa" value="{{ grupo.glosa_medico }}"></td>
+      <td><input type="text" name="glosa_enfermagem_{{ grupo.indice }}" class="form-control valor glosa" value="{{ grupo.glosa_enfermagem }}"></td>
+      <td><input type="text" name="valor_liberado_{{ grupo.indice }}" class="form-control valor resultado" readonly value="{{ grupo.valor_liberado }}"></td>
+    </tr>
+    {% endfor %}
+    {% endif %}
+  </tbody>
+  <tfoot>
+    <tr class="fw-bold bg-light">
+      <td class="text-start fst-italic">TOTAL</td>
+      <td><input type="text" class="form-control text-center" readonly value="N/A"></td>
+      <td><input type="text" class="form-control text-center" readonly value="N/A"></td>
+      <td><input type="text" name="total_apresentado" class="form-control text-end total" readonly></td>
+      <td><input type="text" name="total_glosa_medico" class="form-control text-end total" readonly></td>
+      <td><input type="text" name="total_glosa_enfermagem" class="form-control text-end total" readonly></td>
+      <td><input type="text" name="total_liberado" class="form-control text-end total" readonly></td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="row mt-3">
+  <div class="col-md-4">
+    <label class="form-label">Auditor</label>
+    <select id="select_auditor" name="auditor" class="form-select" required>
+      <option value="">Selecione o auditor</option>
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label for="acomodacao" class="form-label">Acomodação</label>
+    <select id="acomodacao" name="acomodacao" class="form-select" required>
+      <option value="">Selecione...</option>
+      <option value="Enfermaria" {% if registro and registro.acomodacao == 'Enfermaria' %}selected{% endif %}>Enfermaria</option>
+      <option value="Apartamento" {% if registro and registro.acomodacao == 'Apartamento' %}selected{% endif %}>Apartamento</option>
+      <option value="Ambulatório" {% if registro and registro.acomodacao == 'Ambulatório' %}selected{% endif %}>Ambulatório</option>
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <label for="motivo_glosa" class="form-label">Motivo da Glosa</label>
+    <textarea id="motivo_glosa" name="motivo_glosa" class="form-control" rows="1" required>{{ registro.motivo_glosa if registro else '' }}</textarea>
+  </div>
+</div>
+
+
+<!-- Botão para adicionar nova linha -->
+<div class="text-end mt-3">
+  <button type="button" class="btn btn-outline-primary" onclick="adicionarLinha()">➕ Adicionar Despesa</button>
+</div>
+
+<!-- Botões de ação SEMPRE visíveis -->
+<div class="botoes-navegacao d-flex justify-content-between mt-4">
+  <div class="btn-group" role="group">
+    <a href="{{ url_for('main.formulario_primeiro') }}" class="btn btn-outline-primary">⏮ Primeiro</a>
+    {% if registro %}
+    <a href="{{ url_for('main.formulario_anterior', id=registro.id) }}" class="btn btn-outline-secondary">◀ Anterior</a>
+    <a href="{{ url_for('main.formulario_proximo', id=registro.id) }}" class="btn btn-outline-secondary">Próximo ▶</a>
+    {% endif %}
+    <a href="{{ url_for('main.formulario_ultimo') }}" class="btn btn-outline-primary">Último ⏭</a>
+  </div>
+  <div class="btn-group" role="group">
+    {% if registro %}
+    <a href="{{ url_for('main.imprimir', id=registro.id) }}" class="btn btn-outline-info">🖨 Imprimir</a>
+    <a href="{{ url_for('main.editar', id=registro.id) }}" class="btn btn-warning">✏️ Editar</a>
+    {% endif %}
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-dark">⬅ Voltar</a>
+    <button type="submit" class="btn btn-success">💾 Salvar</button>
+  </div>
+</div>
+
+<!-- Script JavaScript para adicionar linhas dinamicamente -->
+<script>
+  let contadorLinhas = {{ grupos_despesa|length if grupos_despesa else 10 }};
+  
+  function adicionarLinha() {
+    contadorLinhas++;
+    const tbody = document.querySelector("#tabela-despesas tbody");
+    const novaLinha = document.createElement("tr");
+  
+    novaLinha.innerHTML = `
+      <td><input type="text" name="grupo_${contadorLinhas}" class="form-control"></td>
+      <td><input type="text" name="qtd_apresentada_${contadorLinhas}" class="form-control" value="N/A"></td>
+      <td><input type="text" name="qtd_autorizada_${contadorLinhas}" class="form-control" value="N/A"></td>
+      <td><input type="text" name="valor_apresentado_${contadorLinhas}" class="form-control valor"></td>
+      <td><input type="text" name="glosa_medico_${contadorLinhas}" class="form-control valor glosa"></td>
+      <td><input type="text" name="glosa_enfermagem_${contadorLinhas}" class="form-control valor glosa"></td>
+      <td><input type="text" name="valor_liberado_${contadorLinhas}" class="form-control valor resultado" readonly></td>
+    `;
+  
+    tbody.appendChild(novaLinha);
+  }
+  </script>
+  <script>
+  function atualizarPeriodoFatura() {
+    const internacao = document.getElementById('data_internacao').value;
+    const alta = document.getElementById('data_alta').value;
+    const inicio = document.getElementById('periodo_inicio');
+    const fim = document.getElementById('periodo_fim');
+
+    if (internacao) {
+      inicio.value = internacao.split('T')[0];
+    } else {
+      inicio.value = '';
+    }
+
+    if (alta) {
+      fim.value = alta.split('T')[0];
+    } else {
+      fim.value = '';
+    }
+  }
+
+  document.getElementById('data_internacao').addEventListener('change', atualizarPeriodoFatura);
+  document.getElementById('data_alta').addEventListener('change', atualizarPeriodoFatura);
+</script>
+
+<!-- Script JavaScript auditor dinamicamente -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const selectAuditor = document.getElementById('select_auditor');
+
+    fetch('/cadastro-auditor')
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(auditor => {
+          const option = document.createElement('option');
+          option.value = auditor.nome;
+          option.textContent = `${auditor.nome} (${auditor.matricula})`;
+          selectAuditor.appendChild(option);
+        });
+      });
+  });
+</script>
+
+  <!-- Script para carregar prestadores e preencher o código automaticamente -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const selectPrestador = document.getElementById('select_prestador');
+    const inputCodigo = document.getElementById('cod_prestador');
+  
+    fetch('/cadastro-prestador')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.nome;
+          option.textContent = p.nome;
+          option.dataset.codigo = p.codigo;
+  
+          {% if registro and registro.nome_prestador %}
+            if (p.nome === "{{ registro.nome_prestador }}") {
+              option.selected = true;
+              inputCodigo.value = p.codigo;
+            }
+          {% endif %}
+  
+          selectPrestador.appendChild(option);
+        });
+      });
+  
+    selectPrestador.addEventListener('change', function () {
+      const selected = selectPrestador.selectedOptions[0];
+      inputCodigo.value = selected ? selected.dataset.codigo || '' : '';
+    });
+  });
+
+  
+  </script>
+  

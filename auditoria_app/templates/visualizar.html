@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Visualizar Relatório{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center">Visualização do Relatório</h2>
+
+  <form>
+    <!-- Informações Básicas -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Nome Prestador</label>
+        <input type="text" class="form-control" value="{{ registro.nome_prestador }}" readonly>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Código Prestador</label>
+        <input type="text" class="form-control" value="{{ registro.cod_prestador }}" readonly>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Nome Beneficiário</label>
+        <input type="text" class="form-control" value="{{ registro.nome_beneficiario }}" readonly>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Código Beneficiário</label>
+        <input type="text" class="form-control" value="{{ registro.cod_beneficiario }}" readonly>
+      </div>
+    </div>
+
+   <div class="row mb-3">
+  <div class="col-md-6">
+    <label class="form-label">Nº guia principal</label>
+    <input type="text" class="form-control" value="{{ registro.guia_principal }}" readonly>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Data da auditoria</label>
+    <input type="date" class="form-control"
+           value="{{ registro.data_auditoria.strftime('%Y-%m-%d') if registro.data_auditoria else '' }}" readonly>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <label class="form-label">Data e hora internação</label>
+    <input type="datetime-local" class="form-control"
+           value="{{ registro.data_internacao.strftime('%Y-%m-%dT%H:%M') if registro.data_internacao else '' }}" readonly>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Data e hora alta</label>
+    <input type="datetime-local" class="form-control"
+           value="{{ registro.data_alta.strftime('%Y-%m-%dT%H:%M') if registro.data_alta else '' }}" readonly>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <label class="form-label">Período da fatura - Início</label>
+    <input type="date" class="form-control"
+           value="{{ registro.fatura_de.strftime('%Y-%m-%d') if registro.fatura_de else '' }}" readonly>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Período da fatura - Fim</label>
+    <input type="date" class="form-control"
+           value="{{ registro.fatura_ate.strftime('%Y-%m-%d') if registro.fatura_ate else '' }}" readonly>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <label class="form-label">Cód. Proced. principal</label>
+    <input type="text" class="form-control" value="{{ registro.cod_procedimento }}" readonly>
+  </div>
+  <div class="col-md-5">
+    <label class="form-label">Descrição procedimento principal</label>
+    <input type="text" class="form-control" value="{{ registro.descricao_procedimento }}" readonly>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">CID diagnóstico principal</label>
+    <input type="text" class="form-control" value="{{ registro.cid }}" readonly>
+  </div>
+</div>
+
+    <!-- Tabela de Despesas -->
+    <h5 class="mt-4">Grupos de Despesas</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Grupo</th>
+            <th>Qtd. Apresentada</th>
+            <th>Qtd. Autorizada</th>
+            <th>Valor Apresentado</th>
+            <th>Glosa Médica</th>
+            <th>Glosa Enfermagem</th>
+            <th>Valor Liberado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in grupos_despesa %}
+          <tr>
+            <td><input type="text" class="form-control" value="{{ item.grupo }}" readonly></td>
+            <td><input type="text" class="form-control" value="{{ item.qtd_apresentada }}" readonly></td>
+            <td><input type="text" class="form-control" value="{{ item.qtd_autorizada }}" readonly></td>
+            <td><input type="text" class="form-control" value="{{ item.valor_apresentado }}" readonly></td>
+            <td><input type="text" class="form-control text-danger" value="{{ item.glosa_medico }}" readonly></td>
+            <td><input type="text" class="form-control text-danger" value="{{ item.glosa_enfermagem }}" readonly></td>
+            <td><input type="text" class="form-control" value="{{ item.valor_liberado }}" readonly></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="fw-bold table-light">
+          <tr>
+            <td>Total</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td><input type="text" class="form-control" value="{{ '{:,.2f}'.format(registro.total_apresentado or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}" readonly></td>
+            <td><input type="text" class="form-control text-danger" value="{{ '{:,.2f}'.format(registro.total_glosa_medico or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}" readonly></td>
+            <td><input type="text" class="form-control text-danger" value="{{ '{:,.2f}'.format(registro.total_glosa_enfermagem or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}" readonly></td>
+            <td><input type="text" class="form-control" value="{{ '{:,.2f}'.format(registro.total_liberado or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}" readonly></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <hr class="my-4">
+
+    <div class="row">
+      <div class="col-md-4">
+        <strong>Auditor:</strong> {{ registro.auditor or '-' }}
+      </div>
+      <div class="col-md-4">
+        <strong>Acomodação:</strong> {{ registro.acomodacao or '-' }}
+      </div>
+      <div class="col-md-4">
+        <strong>Motivo da Glosa:</strong> {{ registro.motivo_glosa or '-' }}
+      </div>
+    </div>
+    
+    <!-- Navegação -->
+    <div class="botoes-navegacao d-flex justify-content-between mt-4">
+      <div class="btn-group" role="group">
+        <a href="{{ url_for('main.formulario_primeiro') }}" class="btn btn-outline-primary">⏮ Primeiro</a>
+        <a href="{{ url_for('main.formulario_anterior', id=registro.id) }}" class="btn btn-outline-secondary">◀ Anterior</a>
+        <a href="{{ url_for('main.formulario_proximo', id=registro.id) }}" class="btn btn-outline-secondary">Próximo ▶</a>
+        <a href="{{ url_for('main.formulario_ultimo') }}" class="btn btn-outline-primary">Último ⏭</a>
+      </div>
+      <div class="btn-group" role="group">
+        <a href="{{ url_for('main.imprimir', id=registro.id) }}" class="btn btn-outline-info">🖨 Imprimir</a>
+        <a href="{{ url_for('main.editar', id=registro.id) }}" class="btn btn-warning">✏️ Editar</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-dark">⬅ Voltar</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

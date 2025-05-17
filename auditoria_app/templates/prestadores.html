@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Cadastro de Prestadores{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h3>📋 Lista de Prestadores</h3>
+
+  <form method="POST" class="row g-3 mb-4">
+    <div class="col-md-6">
+      <input name="nome" class="form-control" placeholder="Nome do Prestador" required>
+    </div>
+    <div class="col-md-4">
+      <input name="codigo" class="form-control" placeholder="Código" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-success w-100">➕ Cadastrar</button>
+    </div>
+  </form>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Código</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in prestadores %}
+      <tr>
+        <td>{{ p.nome }}</td>
+        <td>{{ p.codigo }}</td>
+        <td>{{ 'Ativo' if p.ativo else 'Inativo' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Registros de Auditoria{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">📁 Registros de Auditoria Hospitalar</h3>
+
+<!-- Botões -->
+<div class="mb-3 d-flex justify-content-end gap-2">
+  <button id="btnImprimir" class="btn btn-danger">🖨️ Imprimir Lote</button>
+  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExportar">
+    ⬇️ Exportar Excel
+  </button>
+  <button id="btnEnviarSheets" class="btn btn-primary">📤 Enviar para Sheets</button>
+</div>
+
+<!-- Modal Exportar -->
+<div class="modal fade" id="modalExportar" tabindex="-1" aria-labelledby="modalExportarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="get" action="{{ url_for('main.exportar_excel') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalExportarLabel">Exportar Excel com Filtro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Mês de Referência (AAAA-MM)</label>
+            <input type="month" name="mes" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Data Auditoria - Início</label>
+            <input type="date" name="data_inicio" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Data Auditoria - Fim</label>
+            <input type="date" name="data_fim" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Gerar Excel</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabela -->
+<form id="form-registros">
+  <table class="table table-bordered table-striped table-hover">
+    <thead class="table-light text-center align-middle">
+      <tr>
+        <th><input type="checkbox" id="checkAll"></th>
+        <th>Data Auditoria</th>
+        <th>Mês Referência</th>
+        <th>Auditor</th>
+        <th>Prestador</th>
+        <th>Cód. Prestador</th>
+        <th>Beneficiário</th>
+        <th>Valor Total</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reg in registros %}
+      <tr>
+        <td class="text-center">
+          {% if reg.salvo %}
+          <input type="checkbox" class="registro-checkbox" value="{{ reg.id }}">
+          {% endif %}
+        </td>
+        <td class="text-center">{{ reg.data_auditoria }}</td>
+        <td class="text-center">{{ reg.data_auditoria.strftime('%Y-%m') if reg.data_auditoria else '' }}</td>
+        <td>{{ reg.auditor }}</td>
+        <td>{{ reg.nome_prestador }}</td>
+        <td>{{ reg.cod_prestador }}</td>
+        <td>{{ reg.nome_beneficiario }}</td>
+        <td>R$ {{ '%.2f' | format(reg.total_apresentado or 0) | replace('.', ',') }}</td>
+        <td class="text-center">
+          <a href="{{ url_for('main.editar', id=reg.id) }}" class="btn btn-sm btn-warning">✏️</a>
+          {% if reg.salvo %}
+            <a href="{{ url_for('main.visualizar', id=reg.id) }}" class="btn btn-sm btn-info">👁️</a>
+            <a href="{{ url_for('main.imprimir', id=reg.id) }}" class="btn btn-sm btn-secondary">🖨️</a>
+          {% else %}
+            <span class="badge bg-warning text-dark">Não salvo</span>
+          {% endif %}
+          <a href="{{ url_for('main.excluir', id=reg.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Deseja excluir este registro?')">🗑️</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+
+<!-- Script de seleção e envio para impressão -->
+<script>
+  // Selecionar todos os checkboxes
+  document.getElementById("checkAll").addEventListener("change", function () {
+    const checkboxes = document.querySelectorAll(".registro-checkbox");
+    checkboxes.forEach(cb => cb.checked = this.checked);
+  });
+
+  // Imprimir lote
+  document.getElementById("btnImprimir").addEventListener("click", function () {
+    const selecionados = Array.from(document.querySelectorAll(".registro-checkbox:checked"))
+                              .map(cb => cb.value);
+    if (selecionados.length === 0) {
+      alert("Selecione pelo menos um registro para imprimir.");
+      return;
+    }
+
+    const url = "{{ url_for('main.imprimir_lote') }}?ids=" + selecionados.join(",");
+
+    window.open(url, '_blank');
+  });
+
+  // Enviar registros selecionados para Google Sheets
+  document.getElementById("btnEnviarSheets").addEventListener("click", function () {
+    const selecionados = Array.from(document.querySelectorAll(".registro-checkbox:checked"))
+                              .map(cb => cb.value);
+    if (selecionados.length === 0) {
+      alert("Selecione pelo menos um registro para enviar.");
+      return;
+    }
+
+    const confirmar = confirm("Deseja enviar os registros selecionados para a planilha do Google Sheets?");
+    if (!confirmar) return;
+
+    fetch("{{ url_for('main.enviar_sheets') }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token() if csrf_token }}"
+      },
+      body: JSON.stringify({ ids: selecionados })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.success) {
+        alert("Registros enviados com sucesso para o Google Sheets!");
+      } else {
+        alert("Erro ao enviar para o Google Sheets.");
+      }
+    })
+    .catch(err => {
+      console.error("Erro:", err);
+      alert("Erro na requisição.");
+    });
+  });
+</script>
+{% endblock %}

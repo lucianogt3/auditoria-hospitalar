@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Cadastro de Auditor{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>👨‍⚕️ Cadastro de Auditor</h3>
+
+  <form method="POST" action="{{ url_for('main.salvar_auditor') }}" class="row g-3 mb-4">
+    <div class="col-md-6">
+      <input name="nome" class="form-control" placeholder="Nome do Auditor" required>
+    </div>
+    <div class="col-md-4">
+      <input name="matricula" class="form-control" placeholder="Matrícula" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-success w-100">➕ Cadastrar</button>
+    </div>
+  </form>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Matrícula</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in auditores %}
+      <tr>
+        <td>{{ a.nome }}</td>
+        <td>{{ a.matricula }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
