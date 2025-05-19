@@ -507,10 +507,13 @@ def sair():
     logout_user()
     flash("Sessão encerrada com sucesso.", "success")
     return redirect(url_for('auth.login'))
+
+
 @main.route('/enviar_sheets', methods=['POST'])
 @login_required
 def enviar_sheets():
     import gspread
+    import json
     from google.oauth2.service_account import Credentials
 
     data = request.get_json()
@@ -521,11 +524,18 @@ def enviar_sheets():
 
     registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
 
-    # Conexão com Google Sheets
+    # ✅ Conexão segura com Google Sheets usando variável de ambiente
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-    cred_path = os.path.join(os.path.dirname(__file__), 'credentials', 'credenciais.json')
-    CREDS = Credentials.from_service_account_file(cred_path, scopes=SCOPES)
-    gc = gspread.authorize(CREDS)
+    credenciais_json = os.getenv("GOOGLE_CREDENTIALS")
+    if not credenciais_json:
+        return jsonify(success=False, message="Credenciais do Google não encontradas.")
+
+    try:
+        info = json.loads(credenciais_json)
+        CREDS = Credentials.from_service_account_info(info, scopes=SCOPES)
+        gc = gspread.authorize(CREDS)
+    except Exception as e:
+        return jsonify(success=False, message=f"Erro na autenticação com o Google: {e}")
 
     # Abre a planilha
     planilha = gc.open_by_key("169SOR_FnD7z3BR_D9a1NWe5iknoFqHWckM3Shxnf9-c")
@@ -549,4 +559,5 @@ def enviar_sheets():
         ])
 
     return jsonify(success=True)
+
 
