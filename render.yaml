@@ -1,7 +1,5 @@
-services:
-  - type: web
-    name: auditoria-hospitalar
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    plan: free
+type: web
+name: auditoria-hospitalar
+runtime: python
+buildCommand: "pip install -r requirements.txt"
+startCommand: "gunicorn 'auditoria_app:create_app()'"
