@@ -1,5 +1,6 @@
-type: web
-name: auditoria-hospitalar
-runtime: python
-buildCommand: "pip install -r requirements.txt"
-startCommand: "gunicorn wsgi:app"
+services:
+  - type: web
+    name: auditoria-hospitalar
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app

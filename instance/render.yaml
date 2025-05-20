@@ -1,5 +1,0 @@
-type: web
-name: auditoria-hospitalar
-runtime: python
-buildCommand: "pip install -r requirements.txt"
-startCommand: "gunicorn app:app"
