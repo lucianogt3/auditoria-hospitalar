@@ -1,8 +1,10 @@
 services:
   - type: web
-    name: auditoria-app
-    runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-      ./install-wkhtmltopdf.sh
-    startCommand: gunicorn wsgi:app
+    name: auditoria-hospitalar
+    env: docker
+    plan: free
+    branch: main
+    repo: https://github.com/lucianogt3/auditoria-hospitalar
+    dockerfilePath: ./Dockerfile
+    buildCommand: ""
+    startCommand: ""
