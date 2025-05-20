@@ -12,7 +12,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+try:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_ALL, '')  # Usa o padrão do sistema
 pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
 
 main = Blueprint('main', __name__)
