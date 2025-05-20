@@ -2,9 +2,6 @@ services:
   - type: web
     name: auditoria-hospitalar
     env: docker
-    plan: free
-    branch: main
     repo: https://github.com/lucianogt3/auditoria-hospitalar
+    branch: main
     dockerfilePath: ./Dockerfile
-    buildCommand: ""
-    startCommand: ""
