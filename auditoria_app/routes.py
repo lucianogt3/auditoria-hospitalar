@@ -300,29 +300,29 @@ def editar(id):
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
-
 @main.route('/imprimir/<int:id>')
 @login_required
 def imprimir(id):
     r = Auditoria.query.get_or_404(id)
 
+    # Conversão de datas
     r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
     r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
     r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
     r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
     r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
 
+    # Datas formatadas
     r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
     r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
     r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
     r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
     r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
-    # Caminho absoluto para wkhtmltopdf conseguir renderizar
+    # Caminho local do logo
     logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
     logo_url = f"file://{logo_path}"
 
-    # Renderiza HTML com o caminho correto do logo
     rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
 
     options = {
@@ -337,6 +337,7 @@ def imprimir(id):
 
     pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
+
 
 @main.route('/formulario/primeiro')
 @login_required
