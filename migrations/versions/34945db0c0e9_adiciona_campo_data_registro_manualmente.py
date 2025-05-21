@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     with op.batch_alter_table('auditoria') as batch_op:
         batch_op.add_column(
-            sa.Column('data_registro', sa.DateTime(), nullable=True, server_default=sa.text("(datetime('now'))"))
+            sa.Column('data_registro', sa.DateTime(), server_default=sa.text("now()")),
         )
 
 def downgrade():
