@@ -306,19 +306,27 @@ def editar(id):
 def imprimir(id):
     r = Auditoria.query.get_or_404(id)
 
+    # Processa datas (mantém)
     r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
     r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
     r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
     r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
     r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
 
+    # Formatação de datas (mantém)
     r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
     r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
     r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
     r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
     r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
-    options = {
+    # 👇 Caminho absoluto para o logo
+    import os
+    logo_path = os.path.join(os.getcwd(), 'auditoria_app', 'static', 'img', 'logo_ipasgo.png')
+
+    # Geração do PDF
+    rendered = render_template("pdf_individual.html", r=r, logo_path=logo_path)
+    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options={
         'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
@@ -326,12 +334,8 @@ def imprimir(id):
         'margin-bottom': '10mm',
         'margin-left': '10mm',
         'encoding': 'UTF-8',
-    }
-
-    rendered = render_template("pdf_individual.html", r=r)
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    })
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
-
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -572,3 +576,5 @@ def enviar_sheets():
     return jsonify(success=True)
 
 
+logo_path = os.path.abspath(os.path.join('auditoria_app', 'static', 'img', 'logo_ipasgo.png'))
+rendered = render_template("pdf_individual.html", r=r, logo_path=logo_path)
