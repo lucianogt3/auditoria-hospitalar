@@ -578,5 +578,3 @@ def enviar_sheets():
     return jsonify(success=True)
 
 
-logo_path = os.path.abspath(os.path.join('auditoria_app', 'static', 'img', 'logo_ipasgo.png'))
-rendered = render_template("pdf_individual.html", r=r, logo_path=logo_path)
