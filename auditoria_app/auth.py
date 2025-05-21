@@ -71,54 +71,54 @@ def logout():
     logout_user()
     return redirect(url_for('auth.login'))
 
-# Rota de registro
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        email = request.form['email']
+        username = request.form.get('username')
+        password = request.form.get('password')
+        email = request.form.get('email')
 
-        if User.query.filter_by(username=username).first():
-            flash("Usuário já existe.")
+        # Validação
+        if not username or not password or not email:
+            flash("Todos os campos são obrigatórios.", 'danger')
             return redirect(url_for('auth.register'))
 
-        token = gerar_token(email)
-        new_user = User(
-            username=username,
-            email=email,
-            email_confirmed=False,
-            confirmation_token=token
-        )
-        new_user.set_password(password)
+        if User.query.filter_by(username=username).first():
+            flash("Usuário já existe.", 'danger')
+            return redirect(url_for('auth.register'))
 
-        db.session.add(new_user)
-        db.session.commit()
+        if User.query.filter_by(email=email).first():
+            flash("E-mail já cadastrado.", 'danger')
+            return redirect(url_for('auth.register'))
 
-        enviar_email_confirmacao(email, token)
-        flash("Usuário criado com sucesso! Verifique seu e-mail para confirmar.")
-        return redirect(url_for('auth.login'))
+        try:
+            token = gerar_token(email)
+            new_user = User(
+                username=username,
+                email=email,
+                email_confirmed=False,
+                confirmation_token=token
+            )
+            new_user.set_password(password)
+
+            db.session.add(new_user)
+            db.session.commit()
+
+            try:
+                enviar_email_confirmacao(email, token)
+            except Exception as e:
+                print("Erro ao enviar e-mail:", e)
+
+            flash("Usuário criado com sucesso! Verifique seu e-mail.", 'success')
+            return redirect(url_for('auth.login'))
+
+        except Exception as e:
+            db.session.rollback()
+            print("Erro ao registrar usuário:", e)
+            flash("Erro ao registrar usuário. Verifique os dados e tente novamente.", 'danger')
 
     return render_template('register.html')
 
-# Confirmação de e-mail
-@auth.route('/confirmar/<token>')
-def confirmar_email(token):
-    email = verificar_token(token)
-    if not email:
-        flash('Link inválido ou expirado.', 'danger')
-        return redirect(url_for('auth.login'))
-
-    user = User.query.filter_by(email=email).first()
-    if user:
-        user.email_confirmed = True
-        user.confirmation_token = None
-        db.session.commit()
-        flash('E-mail confirmado com sucesso. Você já pode fazer login.', 'success')
-    else:
-        flash('Usuário não encontrado.', 'danger')
-
-    return redirect(url_for('auth.login'))
 
 @auth.route('/esqueci_senha', methods=['GET', 'POST'])
 def esqueci_senha():
