@@ -11,12 +11,20 @@ from flask_login import logout_user
 import gspread
 from google.oauth2.service_account import Credentials
 import os
-
+import platform
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
-    locale.setlocale(locale.LC_ALL, '')  # Usa o padrão do sistema
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+    locale.setlocale(locale.LC_ALL, '')
+
+# Detecta sistema operacional para configurar o caminho do wkhtmltopdf corretamente
+if platform.system() == "Windows":
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+# Inicializa a configuração do pdfkit
+pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
 main = Blueprint('main', __name__)
 
