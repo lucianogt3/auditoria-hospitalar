@@ -2,4 +2,6 @@
 .env
 *.pyc
 __pycache__/
-auditoria.db
+
+# Ignorar banco de dados SQLite
+instance/auditoria.db

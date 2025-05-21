@@ -5,6 +5,9 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from .extensions import mail
 from .config import Config  # Importa as configurações do seu config.py
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # Inicializa extensões
 db = SQLAlchemy()
