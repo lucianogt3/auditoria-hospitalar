@@ -25,6 +25,8 @@ def create_app():
 
     # Importa o modelo de usuário
     from .models import User
+    from .models import Auditoria
+
 
     @login_manager.user_loader
     def load_user(user_id):

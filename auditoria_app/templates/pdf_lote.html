@@ -135,18 +135,35 @@
     </tr>
   </thead>
   <tbody>
-    {% for i in range(1, 11) %}
-    <tr class="center">
-      <td>{{ r['grupo_' ~ i] }}</td>
-      <td>{{ r['qtd_apresentada_' ~ i] }}</td>
-      <td>{{ r['qtd_autorizada_' ~ i] }}</td>
-      <td>R$ {{ '%.2f'|format(r['valor_apresentado_' ~ i] or 0) }}</td>
-      <td style="color: red">R$ {{ '%.2f'|format(r['glosa_medico_' ~ i] or 0) }}</td>
-      <td style="color: red">R$ {{ '%.2f'|format(r['glosa_enfermagem_' ~ i] or 0) }}</td>
-      <td>R$ {{ '%.2f'|format(r['valor_liberado_' ~ i] or 0) }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
+  {% for i in range(1, 11) %}
+  <tr class="center">
+    <td>{{ r['grupo_' ~ i] }}</td>
+    <td>{{ r['qtd_apresentada_' ~ i] }}</td>
+    <td>{{ r['qtd_autorizada_' ~ i] }}</td>
+    <td>
+      {% if r['valor_apresentado_' ~ i] %}
+        R$ {{ '%.2f'|format(r['valor_apresentado_' ~ i]) }}
+      {% endif %}
+    </td>
+    <td style="color: red">
+      {% if r['glosa_medico_' ~ i] %}
+        R$ {{ '%.2f'|format(r['glosa_medico_' ~ i]) }}
+      {% endif %}
+    </td>
+    <td style="color: red">
+      {% if r['glosa_enfermagem_' ~ i] %}
+        R$ {{ '%.2f'|format(r['glosa_enfermagem_' ~ i]) }}
+      {% endif %}
+    </td>
+    <td>
+      {% if r['valor_liberado_' ~ i] %}
+        R$ {{ '%.2f'|format(r['valor_liberado_' ~ i]) }}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
   <tfoot>
     <tr class="center bold">
       <td colspan="3">TOTAL</td>
@@ -164,16 +181,16 @@
   <tr>
     <td>
       <strong>De acordo Auditoria/Faturamento Prestador:</strong><br><br>
-      Data: ____/____/______<br><br>
+      Data: {{ r.data_registro_br }}<br><br>
       Assinatura e carimbo: ___________________________________________<br>
     </td>
     <td>
       <strong>Auditoria Operadora:</strong><br><br>
-      Data: ____/____/______<br><br>
+      Data: {{ r.data_registro_br }}<br><br>
       Médico Auditor:<br>
-      Assinatura e carimbo:___________________________________________ <br>
-      <br><br>Enfermeiro Auditor:<br>
-      Assinatura e carimbo:____________________________________________<br>
+      Assinatura e carimbo: ___________________________________________<br><br>
+      Enfermeiro Auditor:<br>
+      Assinatura e carimbo: ___________________________________________<br>
     </td>
   </tr>
 </table>

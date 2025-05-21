@@ -319,6 +319,9 @@ def imprimir(id):
     r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
     r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
+    # Nova linha para exibir data do registro
+    r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
+
     # Caminho local do logo
     logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
     logo_url = f"file://{logo_path}"
@@ -329,15 +332,14 @@ def imprimir(id):
         'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
-        'margin-right': '10mm',
+        'margin-right': '5mm',
         'margin-bottom': '10mm',
-        'margin-left': '10mm',
+        'margin-left': '5mm',
         'encoding': 'UTF-8',
     }
 
     pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
-
 
 @main.route('/formulario/primeiro')
 @login_required
