@@ -122,7 +122,7 @@ document.addEventListener('blur', function (e) {
 <body>
   <div class="container">
     <h1>Formulário de Auditoria Hospitalar</h1>
-    <form method="POST" action="/salvar">
+    <form method="POST" action="{% if modo == 'editar' %}{{ url_for('main.editar', id=registro.id) }}{% else %}{{ url_for('main.salvar') }}{% endif %}">
       <!-- Campos iniciais do formulário -->
       <div class="row mb-3">
         <div class="col-md-6">
