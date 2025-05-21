@@ -11,30 +11,45 @@ import traceback
 auth = Blueprint('auth', __name__)
 
 
+from flask import current_app, url_for
+from flask_mail import Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+
 # Geração de token para confirmação ou redefinição
 def gerar_token(email):
-    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    secret_key = current_app.config.get('SECRET_KEY')
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY não está configurada na aplicação Flask.")
+    
+    s = URLSafeTimedSerializer(secret_key)
     return s.dumps(email, salt='email-confirm')
 
+# Verificação de token
 def verificar_token(token):
-    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    secret_key = current_app.config.get('SECRET_KEY')
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY não está configurada na aplicação Flask.")
+
+    s = URLSafeTimedSerializer(secret_key)
     try:
         return s.loads(token, salt='email-confirm', max_age=3600)
     except (SignatureExpired, BadSignature):
         return None
 
-# Envia e-mail com link
+# Envia e-mail com link de confirmação
 def enviar_email_confirmacao(email, token):
     link = url_for('auth.confirmar_email', token=token, _external=True)
     msg = Message('Confirme seu e-mail', recipients=[email])
     msg.body = f'Clique no link para confirmar seu e-mail: {link}'
     mail.send(msg)
 
+# Envia e-mail com link de redefinição de senha
 def enviar_email_redefinicao(email, token):
     link = url_for('auth.redefinir_senha', token=token, _external=True)
     msg = Message('Redefinição de senha', recipients=[email])
     msg.body = f'Clique no link para redefinir sua senha e tenha acesso ao seu CAPEANTE ONLINE: {link}'
     mail.send(msg)
+
 
 # Rota de login
 @auth.route('/login', methods=['GET', 'POST'])
@@ -112,7 +127,12 @@ def esqueci_senha():
         user = User.query.filter_by(email=email).first()
 
         if user:
-            s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+            secret = current_app.config.get('SECRET_KEY')
+            if not secret:
+                flash('Erro interno: chave secreta não configurada.', 'danger')
+                return redirect(url_for('auth.login'))
+
+            s = URLSafeTimedSerializer(secret)
             token = s.dumps(email, salt='recupera-senha')
 
             user.confirmation_token = token
@@ -123,7 +143,6 @@ def esqueci_senha():
             msg.body = f'Clique no link para redefinir sua senha: {link}'
 
             try:
-                
                 mail.send(msg)
                 flash('Um link de redefinição foi enviado para seu e-mail.', 'success')
             except Exception as e:
@@ -135,13 +154,15 @@ def esqueci_senha():
         flash('E-mail não encontrado.', 'danger')
     return render_template('esqueci_senha.html')
 
-
 @auth.route('/redefinir_senha/<token>', methods=['GET', 'POST'])
 def redefinir_senha(token):
-    from itsdangerous import SignatureExpired, BadSignature
-
     try:
-        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        secret = current_app.config.get('SECRET_KEY')
+        if not secret:
+            flash('Erro interno: chave secreta não configurada.', 'danger')
+            return redirect(url_for('auth.esqueci_senha'))
+
+        s = URLSafeTimedSerializer(secret)
         email = s.loads(token, salt='recupera-senha', max_age=3600)
     except SignatureExpired:
         flash('O link expirou. Solicite um novo.', 'danger')
