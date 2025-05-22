@@ -105,42 +105,40 @@
         <td class="sub-label">Quantidade autorizada</td>
       </tr>
     </thead>
-    <tbody>
- {% for i in range(1, 11) %}
-<tr class="center">
-  <td>{{ r['grupo_' ~ i] or 'N/A' }}</td>
-  <td>{{ r['qtd_apresentada_' ~ i] or 'N/A' }}</td>
-  <td>{{ r['qtd_autorizada_' ~ i] or 'N/A' }}</td>
-  <td>
-    {% if r['valor_apresentado_' ~ i] is not none %}
-      R$ {{ '%.2f'|format(r['valor_apresentado_' ~ i]) }}
-    {% else %}
-      N/A
-    {% endif %}
-  </td>
-  <td style="color: red">
-    {% if r['glosa_medico_' ~ i] is not none %}
-      R$ {{ '%.2f'|format(r['glosa_medico_' ~ i]) }}
-    {% else %}
-      N/A
-    {% endif %}
-  </td>
-  <td style="color: red">
-    {% if r['glosa_enfermagem_' ~ i] is not none %}
-      R$ {{ '%.2f'|format(r['glosa_enfermagem_' ~ i]) }}
-    {% else %}
-      N/A
-    {% endif %}
-  </td>
-  <td>
-    {% if r['valor_liberado_' ~ i] is not none %}
-      R$ {{ '%.2f'|format(r['valor_liberado_' ~ i]) }}
-    {% else %}
-      N/A
-    {% endif %}
-  </td>
-</tr>
-{% endfor %}
+  <tbody>
+  {% for i in range(1, 11) %}
+  <tr class="center">
+    <td>{{ r['grupo_' ~ i] or 'N/A' }}</td>
+    <td>{{ r['qtd_apresentada_' ~ i] if r['qtd_apresentada_' ~ i] else 'N/A' }}</td>
+    <td>{{ r['qtd_autorizada_' ~ i] if r['qtd_autorizada_' ~ i] else 'N/A' }}</td>
+    
+    <td>
+      {% if r['valor_apresentado_' ~ i] and r['valor_apresentado_' ~ i] > 0 %}
+        R$ {{ '%.2f'|format(r['valor_apresentado_' ~ i]) }}
+      {% endif %}
+    </td>
+    
+    <td style="color: red">
+      {% if r['glosa_medico_' ~ i] and r['glosa_medico_' ~ i] > 0 %}
+        R$ {{ '%.2f'|format(r['glosa_medico_' ~ i]) }}
+      {% endif %}
+    </td>
+    
+    <td style="color: red">
+      {% if r['glosa_enfermagem_' ~ i] and r['glosa_enfermagem_' ~ i] > 0 %}
+        R$ {{ '%.2f'|format(r['glosa_enfermagem_' ~ i]) }}
+      {% endif %}
+    </td>
+    
+    <td>
+      {% if r['valor_liberado_' ~ i] and r['valor_liberado_' ~ i] > 0 %}
+        R$ {{ '%.2f'|format(r['valor_liberado_' ~ i]) }}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
 
     <tfoot>
       <tr class="center bold">
