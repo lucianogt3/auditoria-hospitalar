@@ -402,25 +402,36 @@ def formulario_ultimo():
 @main.route('/exportar_excel')
 @login_required
 def exportar_excel():
+    from io import BytesIO
+
     mes = request.args.get('mes')
-    data_inicio = request.args.get('data_inicio')
-    data_fim = request.args.get('data_fim')
+    data_inicio_str = request.args.get('data_inicio')
+    data_fim_str = request.args.get('data_fim')
 
     query = Auditoria.query
 
-    if mes:
-        # Constrói o intervalo com base no mês
-        data_inicio = f"{mes}-01"
-        ano, mes_num = map(int, mes.split("-"))
-        if mes_num == 12:
-            data_fim = f"{ano + 1}-01-01"
+    # Parsing das datas
+    try:
+        if mes:
+            ano, mes_num = map(int, mes.split('-'))
+            data_inicio = datetime(ano, mes_num, 1)
+            if mes_num == 12:
+                data_fim = datetime(ano + 1, 1, 1)
+            else:
+                data_fim = datetime(ano, mes_num + 1, 1)
         else:
-            data_fim = f"{ano}-{mes_num + 1:02d}-01"
+            data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d") if data_inicio_str else None
+            data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d") if data_fim_str else None
+            if data_fim:
+                data_fim = data_fim.replace(hour=23, minute=59, second=59)
+    except Exception as e:
+        flash("Erro ao interpretar as datas. Use o formato correto: AAAA-MM ou AAAA-MM-DD", "danger")
+        return redirect(url_for('main.relatorio'))
 
     if data_inicio:
         query = query.filter(Auditoria.data_auditoria >= data_inicio)
     if data_fim:
-        query = query.filter(Auditoria.data_auditoria < data_fim)
+        query = query.filter(Auditoria.data_auditoria <= data_fim)
 
     registros = query.all()
 
@@ -428,6 +439,53 @@ def exportar_excel():
         flash("Nenhum dado encontrado para exportar com os filtros aplicados.", "warning")
         return redirect(url_for('main.relatorio'))
 
+    # Construção dos dados
+    dados = []
+    for r in registros:
+        dados.append({
+            'ID': r.id,
+            'Auditor': r.auditor,
+            'Nome do Beneficiário': r.nome_beneficiario,
+            'Código do Beneficiário': r.cod_beneficiario,
+            'Código do Prestador': r.cod_prestador,
+            'Nome do Prestador': r.nome_prestador,
+            'Guia Principal': r.guia_principal,
+            'Data Internação': r.data_internacao.strftime("%d/%m/%Y %H:%M") if r.data_internacao else '',
+            'Hora Internação': r.hora_internacao,
+            'Data Alta': r.data_alta.strftime("%d/%m/%Y %H:%M") if r.data_alta else '',
+            'Hora Alta': r.hora_alta,
+            'Data Auditoria': r.data_auditoria.strftime("%d/%m/%Y") if r.data_auditoria else '',
+            'Tipo Internação': r.tipo_internacao,
+            'Caracter Internação': r.caracter_internacao,
+            'Parcial': r.parcial,
+            'Código Procedimento': r.cod_procedimento,
+            'Descrição Procedimento': r.descricao_procedimento,
+            'CID Código': r.cid_codigo,
+            'CID Descrição': r.cid_descricao,
+            'Fatura De': r.fatura_de.strftime("%d/%m/%Y") if r.fatura_de else '',
+            'Fatura Até': r.fatura_ate.strftime("%d/%m/%Y") if r.fatura_ate else '',
+            'Acomodação': r.acomodacao,
+            'Motivo Glosa': r.motivo_glosa,
+            'Total Apresentado': r.total_apresentado,
+            'Total Glosa Médico': r.total_glosa_medico,
+            'Total Glosa Enfermagem': r.total_glosa_enfermagem,
+            'Total Liberado': r.total_liberado,
+            'Data Registro': r.data_registro.strftime("%d/%m/%Y") if r.data_registro else ''
+        })
+
+    df = pd.DataFrame(dados)
+
+    # Exporta para Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Auditoria')
+
+    output.seek(0)
+
+    return send_file(output,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     download_name='auditoria_completa.xlsx',
+                     as_attachment=True)
 
 @main.route('/excluir/<int:id>')
 @login_required
