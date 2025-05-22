@@ -82,12 +82,12 @@ def dashboard():
     mes = request.args.get('mes')
     query = Auditoria.query
 
-    if mes:
-    # Constrói datas com base no mês
+   if mes:
+    # Constrói intervalo de datas com base no mês informado
     data_inicio = f"{mes}-01"
     ano, mes_num = map(int, mes.split("-"))
-    
-    # Lida com o próximo mês
+
+    # Calcula o primeiro dia do próximo mês
     if mes_num == 12:
         data_fim = f"{ano + 1}-01-01"
     else:
@@ -98,18 +98,18 @@ def dashboard():
         Auditoria.data_auditoria < data_fim
     )
 
-    relatorios = query.all()
-    total_apresentado = sum([r.total_apresentado or 0 for r in relatorios])
-    total_glosa_medico = sum([r.total_glosa_medico or 0 for r in relatorios])
-    total_glosa_enfermagem = sum([r.total_glosa_enfermagem or 0 for r in relatorios])
-    total_liberado = sum([r.total_liberado or 0 for r in relatorios])
+relatorios = query.all()
+total_apresentado = sum([r.total_apresentado or 0 for r in relatorios])
+total_glosa_medico = sum([r.total_glosa_medico or 0 for r in relatorios])
+total_glosa_enfermagem = sum([r.total_glosa_enfermagem or 0 for r in relatorios])
+total_liberado = sum([r.total_liberado or 0 for r in relatorios])
 
-    return render_template('dashboard.html',
-                           total_apresentado=total_apresentado,
-                           total_glosa_medico=total_glosa_medico,
-                           total_glosa_enfermagem=total_glosa_enfermagem,
-                           total_liberado=total_liberado,
-                           mes=mes)
+return render_template('dashboard.html',
+                       total_apresentado=total_apresentado,
+                       total_glosa_medico=total_glosa_medico,
+                       total_glosa_enfermagem=total_glosa_enfermagem,
+                       total_liberado=total_liberado,
+                       mes=mes)
 
 @main.route('/relatorio')
 @login_required
