@@ -83,7 +83,20 @@ def dashboard():
     query = Auditoria.query
 
     if mes:
-        query = query.filter(Auditoria.data_auditoria.like(f'{mes}-%'))
+    # Constrói datas com base no mês
+    data_inicio = f"{mes}-01"
+    ano, mes_num = map(int, mes.split("-"))
+    
+    # Lida com o próximo mês
+    if mes_num == 12:
+        data_fim = f"{ano + 1}-01-01"
+    else:
+        data_fim = f"{ano}-{mes_num + 1:02d}-01"
+
+    query = query.filter(
+        Auditoria.data_auditoria >= data_inicio,
+        Auditoria.data_auditoria < data_fim
+    )
 
     relatorios = query.all()
     total_apresentado = sum([r.total_apresentado or 0 for r in relatorios])
