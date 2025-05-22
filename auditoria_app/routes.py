@@ -63,6 +63,15 @@ def parse_data(valor, formato):
             return None
     return None
 
+def limpar_inteiro(valor):
+    try:
+        if valor in [None, '', 'N/A']:
+            return None
+        return int(valor)
+    except (ValueError, TypeError):
+        return None
+
+
 @main.route('/')
 def index():
     return redirect(url_for('auth.login'))
@@ -158,8 +167,8 @@ def salvar():
 
     for i in range(1, 101):
         setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
-        setattr(registro, f'qtd_apresentada_{i}', request.form.get(f'qtd_apresentada_{i}'))
-        setattr(registro, f'qtd_autorizada_{i}', request.form.get(f'qtd_autorizada_{i}'))
+        setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
+        setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
         setattr(registro, f'valor_apresentado_{i}', limpar_valor(request.form.get(f'valor_apresentado_{i}')))
         setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
         setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
@@ -267,8 +276,8 @@ def editar(id):
 
         for i in range(1, 101):
             setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
-            setattr(registro, f'qtd_apresentada_{i}', request.form.get(f'qtd_apresentada_{i}'))
-            setattr(registro, f'qtd_autorizada_{i}', request.form.get(f'qtd_autorizada_{i}'))
+            setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
+            setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
             setattr(registro, f'valor_apresentado_{i}', limpar_valor(request.form.get(f'valor_apresentado_{i}')))
             setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
             setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
