@@ -83,11 +83,10 @@ def dashboard():
     query = Auditoria.query
 
     if mes:
-        # Constrói intervalo de datas com base no mês informado
+        # Intervalo de datas do mês selecionado
         data_inicio = f"{mes}-01"
         ano, mes_num = map(int, mes.split("-"))
 
-        # Calcula o primeiro dia do próximo mês
         if mes_num == 12:
             data_fim = f"{ano + 1}-01-01"
         else:
@@ -99,18 +98,34 @@ def dashboard():
         )
 
     relatorios = query.all()
+    
+    # Somatórios
     total_apresentado = sum([r.total_apresentado or 0 for r in relatorios])
     total_glosa_medico = sum([r.total_glosa_medico or 0 for r in relatorios])
     total_glosa_enfermagem = sum([r.total_glosa_enfermagem or 0 for r in relatorios])
     total_liberado = sum([r.total_liberado or 0 for r in relatorios])
+    
+    # Cálculos adicionais
+    total_glosa_total = total_glosa_medico + total_glosa_enfermagem
+    total_registros = len(relatorios)
 
-    return render_template('dashboard.html',
-                           total_apresentado=total_apresentado,
-                           total_glosa_medico=total_glosa_medico,
-                           total_glosa_enfermagem=total_glosa_enfermagem,
-                           total_liberado=total_liberado,
-                           mes=mes)
+    percentual_glosa = (total_glosa_total / total_apresentado * 100) if total_apresentado else 0
+    percentual_liberado = (total_liberado / total_apresentado * 100) if total_apresentado else 0
+    media_valor_apresentado = (total_apresentado / total_registros) if total_registros else 0
 
+    return render_template(
+        'dashboard.html',
+        mes=mes,
+        total_apresentado=total_apresentado,
+        total_glosa_medico=total_glosa_medico,
+        total_glosa_enfermagem=total_glosa_enfermagem,
+        total_liberado=total_liberado,
+        total_registros=total_registros,
+        percentual_glosa=percentual_glosa,
+        percentual_liberado=percentual_liberado,
+        media_valor_apresentado=media_valor_apresentado,
+        total_glosa_total=total_glosa_total
+    )
 @main.route('/relatorio')
 @login_required
 def relatorio():
