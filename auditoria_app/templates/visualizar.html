@@ -99,16 +99,17 @@
         </thead>
         <tbody>
           {% for item in grupos_despesa %}
-          <tr>
-          <td><input type="text" class="form-control" value="{{ item.grupo }}" readonly></td>
-          <td><input type="text" class="form-control" value="{{ item.qtd_apresentada }}" readonly></td>
-          <td><input type="text" class="form-control" value="{{ item.qtd_autorizada }}" readonly></td>
-          <td><input type="text" class="form-control" value="{{ item.valor_apresentado }}" readonly></td>
-          <td><input type="text" class="form-control text-danger" value="{{ item.glosa_medico }}" readonly></td>
-          <td><input type="text" class="form-control text-danger" value="{{ item.glosa_enfermagem }}" readonly></td>
-          <td><input type="text" class="form-control" value="{{ item.valor_liberado }}" readonly></td>
-          </tr>
+         tr>
+        <td><input type="text" class="form-control" value="{{ item.grupo if item.grupo is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control" value="{{ item.qtd_apresentada if item.qtd_apresentada is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control" value="{{ item.qtd_autorizada if item.qtd_autorizada is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control" value="{{ item.valor_apresentado if item.valor_apresentado is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control text-danger" value="{{ item.glosa_medico if item.glosa_medico is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control text-danger" value="{{ item.glosa_enfermagem if item.glosa_enfermagem is not none else 'N/A' }}" readonly></td>
+        <td><input type="text" class="form-control" value="{{ item.valor_liberado if item.valor_liberado is not none else 'N/A' }}" readonly></td>
+        </tr>
           {% endfor %}
+
         </tbody>
         <tfoot class="fw-bold table-light">
           <tr>
