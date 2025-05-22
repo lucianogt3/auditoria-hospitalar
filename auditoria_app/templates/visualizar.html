@@ -100,13 +100,13 @@
         <tbody>
           {% for item in grupos_despesa %}
           <tr>
-            <td><input type="text" class="form-control" value="{{ item.grupo }}" readonly></td>
-            <td><input type="text" class="form-control" value="{{ item.qtd_apresentada }}" readonly></td>
-            <td><input type="text" class="form-control" value="{{ item.qtd_autorizada }}" readonly></td>
-            <td><input type="text" class="form-control" value="{{ item.valor_apresentado }}" readonly></td>
-            <td><input type="text" class="form-control text-danger" value="{{ item.glosa_medico }}" readonly></td>
-            <td><input type="text" class="form-control text-danger" value="{{ item.glosa_enfermagem }}" readonly></td>
-            <td><input type="text" class="form-control" value="{{ item.valor_liberado }}" readonly></td>
+          <td><input type="text" class="form-control" value="{{ item.grupo }}" readonly></td>
+          <td><input type="text" class="form-control" value="{{ item.qtd_apresentada }}" readonly></td>
+          <td><input type="text" class="form-control" value="{{ item.qtd_autorizada }}" readonly></td>
+          <td><input type="text" class="form-control" value="{{ item.valor_apresentado }}" readonly></td>
+          <td><input type="text" class="form-control text-danger" value="{{ item.glosa_medico }}" readonly></td>
+          <td><input type="text" class="form-control text-danger" value="{{ item.glosa_enfermagem }}" readonly></td>
+          <td><input type="text" class="form-control" value="{{ item.valor_liberado }}" readonly></td>
           </tr>
           {% endfor %}
         </tbody>
