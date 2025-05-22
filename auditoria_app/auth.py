@@ -131,7 +131,7 @@ def esqueci_senha():
             if not secret:
                 flash('Erro interno: chave secreta não configurada.', 'danger')
                 return redirect(url_for('auth.login'))
-
+    
             s = URLSafeTimedSerializer(secret)
             token = s.dumps(email, salt='recupera-senha')
 

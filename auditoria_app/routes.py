@@ -647,7 +647,21 @@ def enviar_sheets():
             f"R$ {r.total_glosa_medico:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',') if r.total_glosa_medico else '',
             r.motivo_glosa or ''
         ])
+@main.route('/excluir_prestador/<int:id>', methods=['POST'])
+def excluir_prestador(id):
+    prestador = Prestador.query.get_or_404(id)
+    db.session.delete(prestador)
+    db.session.commit()
+    flash('Prestador excluído com sucesso!', 'success')
+    return redirect(url_for('main.cadastro_prestador'))
 
     return jsonify(success=True)
 
+@main.route('/excluir_auditor/<int:id>', methods=['POST'])
+def excluir_auditor(id):
+    auditor = Auditor.query.get_or_404(id)
+    db.session.delete(auditor)
+    db.session.commit()
+    flash('Auditor excluído com sucesso!', 'success')
+    return redirect(url_for('main.cadastro_auditor'))
 

@@ -25,13 +25,16 @@
       </tr>
     </thead>
     <tbody>
-      {% for a in auditores %}
-      <tr>
-        <td>{{ a.nome }}</td>
-        <td>{{ a.matricula }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+  {% for a in auditores %}
+  <tr>
+    <td>{{ a.nome }}</td>
+    <td>{{ a.matricula }}</td>
+    <td>
+      <form method="POST" action="{{ url_for('main.excluir_auditor', id=a.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir este auditor?');">
+        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
