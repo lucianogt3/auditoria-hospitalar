@@ -407,51 +407,27 @@ def exportar_excel():
     data_fim = request.args.get('data_fim')
 
     query = Auditoria.query
+
     if mes:
-        query = query.filter(Auditoria.data_auditoria.like(f'{mes}-%'))
+        # Constrói o intervalo com base no mês
+        data_inicio = f"{mes}-01"
+        ano, mes_num = map(int, mes.split("-"))
+        if mes_num == 12:
+            data_fim = f"{ano + 1}-01-01"
+        else:
+            data_fim = f"{ano}-{mes_num + 1:02d}-01"
+
     if data_inicio:
         query = query.filter(Auditoria.data_auditoria >= data_inicio)
     if data_fim:
-        query = query.filter(Auditoria.data_auditoria <= data_fim)
+        query = query.filter(Auditoria.data_auditoria < data_fim)
 
     registros = query.all()
+
     if not registros:
         flash("Nenhum dado encontrado para exportar com os filtros aplicados.", "warning")
         return redirect(url_for('main.relatorio'))
 
-    dados = []
-    for r in registros:
-        data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-        data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-
-        dados.append({
-            "AUDITOR": r.auditor or '',
-            "PRESTADOR": r.nome_prestador or '',
-            "BENEFICIÁRIO": r.nome_beneficiario or '',
-            "TIPO DE INTERNAÇÃO (CLÍNICA/CIRÚRGICA)": r.tipo_internacao or '',
-            "URGÊNCIA/ELETIVA": r.caracter_internacao or '',
-            "ACOMODAÇÃO": r.acomodacao or '',
-            "DATA ADMISSÃO": data_internacao.strftime('%d/%m/%Y') if data_internacao else '',
-            "DATA ALTA": data_alta.strftime('%d/%m/%Y') if data_alta else '',
-            "CID PRINCIPAL": r.cid_codigo or '',
-            "VALOR APRESENTADO": r.total_apresentado or 0,
-            "VALOR GLOSA ENF": r.total_glosa_enfermagem or 0,
-            "VALOR GL MED": r.total_glosa_medico or 0,
-            "MOTIVO DA GLOSA": r.motivo_glosa or ''
-        })
-
-    df = pd.DataFrame(dados)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Auditoria')
-    output.seek(0)
-
-    return send_file(
-        output,
-        download_name="lista_auditoria.xlsx",
-        as_attachment=True,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
 
 @main.route('/excluir/<int:id>')
 @login_required
