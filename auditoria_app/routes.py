@@ -577,7 +577,10 @@ def imprimir_lote():
         r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
         r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
-    rendered = render_template('pdf_lote.html', registros=registros)
+    logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
+    logo_url = f"file://{logo_path}"
+    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+
 
     options = {
         'enable-local-file-access': '',
