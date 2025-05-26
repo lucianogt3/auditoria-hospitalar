@@ -47,10 +47,8 @@ def create_app():
     def jinja_getattr(obj, attr):
         return getattr(obj, attr)
 
-
-    if platform.system() == "Windows":
+if platform.system() == "Windows":
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
-    path_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
 
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
