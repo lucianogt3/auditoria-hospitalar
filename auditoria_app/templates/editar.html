@@ -6,7 +6,7 @@
   <div class="row mb-3">
     <div class="col-md-6">
       <label class="form-label">Nome do Beneficiário</label>
-      <input type="text" name="nome_beneficiario" class="form-control" value="{{ registro.nome_beneficiario }}">
+      <input type="text" name="nome_beneficiario" class="form-control" value="{{ registro.nome_beneficiario or 'N/A' }}">
     </div>
     <div class="col-md-6">
       <label class="form-label">Data da Auditoria</label>
@@ -45,12 +45,12 @@
     <div class="col-md-6">
       <label class="form-label">Total Apresentado (R$)</label>
       <input type="text" name="total_apresentado" class="form-control"
-             value="{{ 'R$ {:.2f}'.format(registro.total_apresentado) if registro.total_apresentado else '' }}">
+             value="{{ 'R$ {:.2f}'.format(registro.total_apresentado) if registro.total_apresentado is not none else 'N/A' }}">
     </div>
     <div class="col-md-6">
       <label class="form-label">Glosa Médico (R$)</label>
       <input type="text" name="total_glosa_medico" class="form-control"
-             value="{{ 'R$ {:.2f}'.format(registro.total_glosa_medico) if registro.total_glosa_medico else '' }}">
+             value="{{ 'R$ {:.2f}'.format(registro.total_glosa_medico) if registro.total_glosa_medico is not none else 'N/A' }}">
     </div>
   </div>
 
@@ -58,12 +58,12 @@
     <div class="col-md-6">
       <label class="form-label">Glosa Enfermagem (R$)</label>
       <input type="text" name="total_glosa_enfermagem" class="form-control"
-             value="{{ 'R$ {:.2f}'.format(registro.total_glosa_enfermagem) if registro.total_glosa_enfermagem else '' }}">
+             value="{{ 'R$ {:.2f}'.format(registro.total_glosa_enfermagem) if registro.total_glosa_enfermagem is not none else 'N/A' }}">
     </div>
     <div class="col-md-6">
       <label class="form-label">Total Liberado (R$)</label>
       <input type="text" name="total_liberado" class="form-control"
-             value="{{ 'R$ {:.2f}'.format(registro.total_liberado) if registro.total_liberado else '' }}">
+             value="{{ 'R$ {:.2f}'.format(registro.total_liberado) if registro.total_liberado is not none else 'N/A' }}">
     </div>
   </div>
 
@@ -71,4 +71,3 @@
   <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancelar</a>
 </form>
 {% endblock %}
-

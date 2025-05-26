@@ -51,6 +51,8 @@ def enviar_email_redefinicao(email, token):
     mail.send(msg)
 
 
+from flask import current_app
+
 # Rota de login
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -62,7 +64,11 @@ def login():
             login_user(user)
             return redirect(url_for('main.dashboard'))
         flash("Usuário ou senha incorretos.")
-    return render_template('login.html')
+
+    # Pega o caminho da imagem de fundo da configuração
+    bg_image = current_app.config.get('LOGIN_BG_IMAGE', '/static/img/default-login-bg.jpg')
+    return render_template('login.html', bg_image=bg_image)
+
 
 # Rota de logout
 @auth.route('/logout')

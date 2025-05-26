@@ -193,7 +193,8 @@ def salvar():
         salvo=True
     )
 
-    for i in range(1, 101):
+    # Grupos principais (1 a 10)
+    for i in range(1, 11):
         setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
         setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
         setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
@@ -201,6 +202,16 @@ def salvar():
         setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
         setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
         setattr(registro, f'valor_liberado_{i}', limpar_valor(request.form.get(f'valor_liberado_{i}')))
+
+    # Linhas extras (1 a 5)
+    for i in range(1, 6):
+        setattr(registro, f'linhaextra_grupo_{i}', request.form.get(f'linhaextra_grupo_{i}'))
+        setattr(registro, f'linhaextra_qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'linhaextra_qtd_apresentada_{i}')))
+        setattr(registro, f'linhaextra_qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'linhaextra_qtd_autorizada_{i}')))
+        setattr(registro, f'linhaextra_valor_apresentado_{i}', limpar_valor(request.form.get(f'linhaextra_valor_apresentado_{i}')))
+        setattr(registro, f'linhaextra_glosa_medico_{i}', limpar_valor(request.form.get(f'linhaextra_glosa_medico_{i}')))
+        setattr(registro, f'linhaextra_glosa_enfermagem_{i}', limpar_valor(request.form.get(f'linhaextra_glosa_enfermagem_{i}')))
+        setattr(registro, f'linhaextra_valor_liberado_{i}', limpar_valor(request.form.get(f'linhaextra_valor_liberado_{i}')))
 
     db.session.add(registro)
     db.session.commit()
@@ -355,14 +366,13 @@ def imprimir(id):
     r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
     r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
     r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
-
-    # Nova linha para exibir data do registro
     r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
 
-    # Caminho local do logo
+    # Caminho absoluto para o logo
     logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
     logo_url = f"file://{logo_path}"
 
+    # Renderiza o HTML com os dados
     rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
 
     options = {
@@ -577,10 +587,11 @@ def imprimir_lote():
         r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
         r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
+    # Caminho correto da imagem do logo
     logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
     logo_url = f"file://{logo_path}"
-    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
+    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
     options = {
         'enable-local-file-access': '',
@@ -594,6 +605,7 @@ def imprimir_lote():
 
     pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+
 
 @main.route('/sair')
 def sair():
