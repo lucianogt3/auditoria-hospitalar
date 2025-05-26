@@ -48,13 +48,9 @@ def create_app():
         return getattr(obj, attr)
 
 
-    # Configura wkhtmltopdf com base no sistema operacional
     if platform.system() == "Windows":
-        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    else:
-        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    path_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
 
-    # Salva a configuração no app (opcional, mas útil)
-    app.config['PDFKIT_CONFIG'] = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-    return app
+pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
