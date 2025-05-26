@@ -11,13 +11,9 @@
       height: 100%;
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
+      background: url("{{ url_for('static', filename='img/bg-hospital.jpg') }}") no-repeat center center fixed;
+      background-size: cover;
     }
-
-    /* ✅ Imagem de fundo */
-    body {
-  background: url("{{ url_for('static', filename='img/bg-hospital.jpg') }}") no-repeat center center fixed;
-  background-size: cover;
-}
 
     .overlay {
       position: fixed;
@@ -80,25 +76,13 @@
       font-size: 0.9rem;
     }
   </style>
-  
-  <style>
-    body {
-        background-image: url("{{ bg_image }}");
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
-        height: 100vh;
-        margin: 0;
-    }
-</style>
-
 </head>
 <body>
-  <!-- ✅ Fundo escurecido -->
   <div class="overlay"></div>
 
   <div class="login-box">
     <img src="{{ url_for('static', filename='img/logo_ipasgo.png') }}" alt="Logo">
+
     <h2>NURSE AUDITORIA</h2>
 
     <form method="POST">

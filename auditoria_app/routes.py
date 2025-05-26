@@ -12,6 +12,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 import platform
+from flask import current_app
+import base64
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
@@ -22,6 +24,9 @@ if platform.system() == "Windows":
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
     path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+ # Configuração do pdfkit (finalização obrigatória)
+    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
 # Inicializa a configuração do pdfkit
 pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
@@ -348,45 +353,7 @@ def editar(id):
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
-@main.route('/imprimir/<int:id>')
-@login_required
-def imprimir(id):
-    r = Auditoria.query.get_or_404(id)
 
-    # Conversão de datas
-    r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
-    r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-    r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-    r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
-    r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-
-    # Datas formatadas
-    r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
-    r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
-    r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
-    r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
-    r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
-    r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
-
-    # Caminho absoluto para o logo
-    logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
-    logo_url = f"file://{logo_path}"
-
-    # Renderiza o HTML com os dados
-    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
-
-    options = {
-        'enable-local-file-access': '',
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-right': '5mm',
-        'margin-bottom': '10mm',
-        'margin-left': '5mm',
-        'encoding': 'UTF-8',
-    }
-
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
-    return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -564,6 +531,50 @@ def salvar_auditor():
 def listar_auditores():
     auditores = Auditor.query.all()
     return jsonify([{'nome': a.nome, 'matricula': a.matricula} for a in auditores])
+
+@main.route('/imprimir/<int:id>')
+@login_required
+def imprimir(id):
+    r = Auditoria.query.get_or_404(id)
+
+    # Conversão de datas
+    r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
+    r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
+    r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
+    r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
+    r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
+
+    # Datas formatadas
+    r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
+    r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
+    r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
+    r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
+    r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
+    r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
+
+    # Logo como base64
+    logo_path = os.path.abspath(os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png'))
+    with open(logo_path, "rb") as image_file:
+        logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+    logo_url = f"data:image/png;base64,{logo_base64}"
+
+    # Renderização
+    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
+
+    options = {
+        'enable-local-file-access': '',
+        'page-size': 'A4',
+        'margin-top': '10mm',
+        'margin-right': '5mm',
+        'margin-bottom': '10mm',
+        'margin-left': '5mm',
+        'encoding': 'UTF-8',
+    }
+
+    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
+
+
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
@@ -575,22 +586,27 @@ def imprimir_lote():
     id_list = [int(x) for x in ids.split(',') if x.isdigit()]
     registros = Auditoria.query.filter(Auditoria.id.in_(id_list)).all()
 
+    # Preparar registros
     for r in registros:
         r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
         r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
         r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
         r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
         r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
+
         r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
         r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
         r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
         r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
         r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
 
-    # Caminho correto da imagem do logo
-    logo_path = os.path.abspath("auditoria_app/static/img/logo_ipasgo.png")
-    logo_url = f"file://{logo_path}"
+    # Logo como base64
+    logo_path = os.path.abspath(os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png'))
+    with open(logo_path, "rb") as image_file:
+        logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+    logo_url = f"data:image/png;base64,{logo_base64}"
 
+    # Renderização
     rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
     options = {
@@ -605,8 +621,6 @@ def imprimir_lote():
 
     pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
-
-
 @main.route('/sair')
 def sair():
     logout_user()

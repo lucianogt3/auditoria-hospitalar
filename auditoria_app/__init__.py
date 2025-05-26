@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from .extensions import mail
 from .config import Config
 from dotenv import load_dotenv
+import pdfkit
 
 # Carrega variáveis de ambiente do .env
 load_dotenv()
@@ -15,10 +16,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
-    app = Flask(
-        __name__,
-        static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
-    )
+    app = Flask(__name__)  # ✅ Usa a pasta 'static/' padrão: auditoria_app/static/
     app.config.from_object(Config)
 
     # Inicializa extensões com a instância do app
@@ -49,4 +47,7 @@ def create_app():
     def jinja_getattr(obj, attr):
         return getattr(obj, attr)
 
+
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
     return app
