@@ -578,7 +578,7 @@ def imprimir(id):
         'encoding': 'UTF-8',
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdfkit.from_string(..., configuration=current_app.config['PDFKIT_CONFIG'])
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 
@@ -631,7 +631,7 @@ def imprimir_lote():
         'encoding': 'UTF-8'
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdfkit.from_string(..., configuration=current_app.config['PDFKIT_CONFIG'])
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
 @main.route('/sair')
 def sair():
