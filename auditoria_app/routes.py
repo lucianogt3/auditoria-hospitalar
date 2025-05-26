@@ -14,6 +14,7 @@ import os
 import platform
 from flask import current_app
 import base64
+from flask import current_app, url_for
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
@@ -551,15 +552,21 @@ def imprimir(id):
     r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
     r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
     r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
+ # Logo com fallback
+    try:
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
+        print("📂 CAMINHO DO LOGO:", logo_path)
+        print("📎 EXISTE?", os.path.exists(logo_path))
 
-    # Logo como base64
-    logo_path = os.path.abspath(os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png'))
-    with open(logo_path, "rb") as image_file:
-        logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-    logo_url = f"data:image/png;base64,{logo_base64}"
+        with open(logo_path, "rb") as image_file:
+            logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+        logo_url = f"data:image/png;base64,{logo_base64}"
+    except Exception as e:
+        print("⚠️ Erro ao carregar logo local:", e)
+        logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
 
-    # Renderização
     rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
+    
 
     options = {
         'enable-local-file-access': '',
@@ -599,15 +606,20 @@ def imprimir_lote():
         r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
         r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
         r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
+ # Logo com fallback
+    try:
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
+        print("📂 CAMINHO DO LOGO:", logo_path)
+        print("📎 EXISTE?", os.path.exists(logo_path))
 
-    # Logo como base64
-    logo_path = os.path.abspath(os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png'))
-    with open(logo_path, "rb") as image_file:
-        logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-    logo_url = f"data:image/png;base64,{logo_base64}"
+        with open(logo_path, "rb") as image_file:
+            logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+        logo_url = f"data:image/png;base64,{logo_base64}"
+    except Exception as e:
+        print("⚠️ Erro ao carregar logo local:", e)
+        logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
 
-    # Renderização
-    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
 
     options = {
         'enable-local-file-access': '',
