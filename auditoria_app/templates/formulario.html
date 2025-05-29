@@ -248,8 +248,8 @@ value="{{ registro.data_alta.strftime('%Y-%m-%dT%H:%M') if registro and registro
     {% for grupo in grupos_despesa %}
     <tr>
       <td><input type="text" name="grupo_{{ grupo.indice }}" class="form-control" value="{{ grupo.grupo }}"></td>
-      <td><input type="text" name="qtd_apresentada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_apresentada or 'N/A' }}"></td>
-      <td><input type="text" name="qtd_autorizada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_autorizada or 'N/A' }}"></td>
+      <td><input type="text" name="qtd_apresentada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_apresentada if grupo.qtd_apresentada is not none else '' }}"></td>
+      <td><input type="text" name="qtd_autorizada_{{ grupo.indice }}" class="form-control" value="{{ grupo.qtd_autorizada if grupo.qtd_autorizada is not none else '' }}"></td>
       <td><input type="text" name="valor_apresentado_{{ grupo.indice }}" class="form-control valor" value="{{ grupo.valor_apresentado }}"></td>
       <td><input type="text" name="glosa_medico_{{ grupo.indice }}" class="form-control valor glosa" value="{{ grupo.glosa_medico }}"></td>
       <td><input type="text" name="glosa_enfermagem_{{ grupo.indice }}" class="form-control valor glosa" value="{{ grupo.glosa_enfermagem }}"></td>
@@ -261,8 +261,8 @@ value="{{ registro.data_alta.strftime('%Y-%m-%dT%H:%M') if registro and registro
   <tfoot>
     <tr class="fw-bold bg-light">
       <td class="text-start fst-italic">TOTAL</td>
-      <td><input type="text" class="form-control text-center" readonly value="N/A"></td>
-      <td><input type="text" class="form-control text-center" readonly value="N/A"></td>
+      <td><input type="text" class="form-control text-center" readonly value=""></td>
+      <td><input type="text" class="form-control text-center" readonly value=""></td>
       <td><input type="text" name="total_apresentado" class="form-control text-end total" readonly></td>
       <td><input type="text" name="total_glosa_medico" class="form-control text-end total" readonly></td>
       <td><input type="text" name="total_glosa_enfermagem" class="form-control text-end total" readonly></td>

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from .models import Auditoria, Prestador, Auditor
 from . import db
+from flask_login import current_user
 from io import BytesIO
 import pdfkit
 import locale
@@ -132,10 +133,28 @@ def dashboard():
         media_valor_apresentado=media_valor_apresentado,
         total_glosa_total=total_glosa_total
     )
+
 @main.route('/relatorio')
 @login_required
 def relatorio():
-    registros = Auditoria.query.all()
+    hoje_flag = request.args.get('hoje')
+    data_filtro = request.args.get('data')
+
+    query = Auditoria.query.filter_by(salvo=True)
+
+    if hoje_flag == '1':
+        hoje = datetime.now().date()
+        query = query.filter(db.func.date(Auditoria.data_registro) == hoje)
+
+    elif data_filtro:
+        try:
+            data_dt = datetime.strptime(data_filtro, '%Y-%m-%d')
+            query = query.filter(db.func.date(Auditoria.data_registro) == data_dt.date())
+        except ValueError:
+            flash("Data inválida no filtro.", "danger")
+
+    registros = query.order_by(Auditoria.data_registro.desc()).all()
+
     return render_template('relatorio.html', registros=registros)
 
 @main.route('/novo', methods=['GET'])
@@ -346,15 +365,15 @@ def editar(id):
             'grupo': getattr(registro, f'grupo_{i}', ''),
             'qtd_apresentada': getattr(registro, f'qtd_apresentada_{i}', ''),
             'qtd_autorizada': getattr(registro, f'qtd_autorizada_{i}', ''),
-            'valor_apresentado': formatar_moeda(getattr(registro, f'valor_apresentado_{i}', 0)),
-            'glosa_medico': formatar_moeda(getattr(registro, f'glosa_medico_{i}', 0)),
-            'glosa_enfermagem': formatar_moeda(getattr(registro, f'glosa_enfermagem_{i}', 0)),
-            'valor_liberado': formatar_moeda(getattr(registro, f'valor_liberado_{i}', 0)),
+            'valor_apresentado': getattr(registro, f'valor_apresentado_{i}', '') or '',
+            'glosa_medico': getattr(registro, f'glosa_medico_{i}', '') or '',
+            'glosa_enfermagem': getattr(registro, f'glosa_enfermagem_{i}', '') or '',
+            'valor_liberado': getattr(registro, f'valor_liberado_{i}', '') or '',
+
         })
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
-
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -600,26 +619,13 @@ def imprimir_lote():
         r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
         r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
         r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-
         r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
         r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
         r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
         r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
         r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
- # Logo com fallback
-    try:
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
-        print("📂 CAMINHO DO LOGO:", logo_path)
-        print("📎 EXISTE?", os.path.exists(logo_path))
 
-        with open(logo_path, "rb") as image_file:
-            logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-        logo_url = f"data:image/png;base64,{logo_base64}"
-    except Exception as e:
-        print("⚠️ Erro ao carregar logo local:", e)
-        logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-
-    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
+    rendered = render_template('pdf_lote.html', registros=registros)
 
     options = {
         'enable-local-file-access': '',
@@ -633,6 +639,7 @@ def imprimir_lote():
 
     pdfkit.from_string(..., configuration=current_app.config['PDFKIT_CONFIG'])
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+
 @main.route('/sair')
 def sair():
     logout_user()

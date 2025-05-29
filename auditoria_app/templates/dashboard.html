@@ -75,7 +75,8 @@
     <div class="card bg-dark">
       <div class="card-body text-white">
         <h5>% Glosa Total</h5>
-        <p class="fs-5">{{ "%.1f"|format(percentual_glosa) }}%</p>
+        <p class="fs-5"> {{ "{:.1f}".format(percentual_glosa) }}%</p>
+
       </div>
     </div>
   </div>

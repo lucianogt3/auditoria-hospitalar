@@ -7,6 +7,8 @@ from .extensions import mail
 from .config import Config
 from dotenv import load_dotenv
 import pdfkit
+import platform
+
 
 # Carrega variáveis de ambiente do .env
 load_dotenv()
