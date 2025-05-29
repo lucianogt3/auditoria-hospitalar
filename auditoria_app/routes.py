@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from .models import Auditoria, Prestador, Auditor
 from . import db
-from flask_login import current_user
 from io import BytesIO
 import pdfkit
 import locale
@@ -13,9 +12,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 import platform
-from flask import current_app
-import base64
-from flask import current_app, url_for
+from flask_login import current_user
+
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
@@ -26,9 +24,6 @@ if platform.system() == "Windows":
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
     path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
- # Configuração do pdfkit (finalização obrigatória)
-    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
 # Inicializa a configuração do pdfkit
 pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
@@ -137,16 +132,11 @@ def dashboard():
 @main.route('/relatorio')
 @login_required
 def relatorio():
-    hoje_flag = request.args.get('hoje')
     data_filtro = request.args.get('data')
 
-    query = Auditoria.query.filter_by(salvo=True)
+    query = Auditoria.query  # ❌ Removido o filtro por empresa inexistente
 
-    if hoje_flag == '1':
-        hoje = datetime.now().date()
-        query = query.filter(db.func.date(Auditoria.data_registro) == hoje)
-
-    elif data_filtro:
+    if data_filtro:
         try:
             data_dt = datetime.strptime(data_filtro, '%Y-%m-%d')
             query = query.filter(db.func.date(Auditoria.data_registro) == data_dt.date())
@@ -154,8 +144,8 @@ def relatorio():
             flash("Data inválida no filtro.", "danger")
 
     registros = query.order_by(Auditoria.data_registro.desc()).all()
-
     return render_template('relatorio.html', registros=registros)
+
 
 @main.route('/novo', methods=['GET'])
 @login_required
@@ -218,8 +208,7 @@ def salvar():
         salvo=True
     )
 
-    # Grupos principais (1 a 10)
-    for i in range(1, 11):
+    for i in range(1, 101):
         setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
         setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
         setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
@@ -227,16 +216,6 @@ def salvar():
         setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
         setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
         setattr(registro, f'valor_liberado_{i}', limpar_valor(request.form.get(f'valor_liberado_{i}')))
-
-    # Linhas extras (1 a 5)
-    for i in range(1, 6):
-        setattr(registro, f'linhaextra_grupo_{i}', request.form.get(f'linhaextra_grupo_{i}'))
-        setattr(registro, f'linhaextra_qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'linhaextra_qtd_apresentada_{i}')))
-        setattr(registro, f'linhaextra_qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'linhaextra_qtd_autorizada_{i}')))
-        setattr(registro, f'linhaextra_valor_apresentado_{i}', limpar_valor(request.form.get(f'linhaextra_valor_apresentado_{i}')))
-        setattr(registro, f'linhaextra_glosa_medico_{i}', limpar_valor(request.form.get(f'linhaextra_glosa_medico_{i}')))
-        setattr(registro, f'linhaextra_glosa_enfermagem_{i}', limpar_valor(request.form.get(f'linhaextra_glosa_enfermagem_{i}')))
-        setattr(registro, f'linhaextra_valor_liberado_{i}', limpar_valor(request.form.get(f'linhaextra_valor_liberado_{i}')))
 
     db.session.add(registro)
     db.session.commit()
@@ -374,6 +353,68 @@ def editar(id):
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
+@main.route('/imprimir/<int:id>')
+@login_required
+def imprimir(id):
+    r = Auditoria.query.get_or_404(id)
+
+    def parse_data(data, fmt='%Y-%m-%d'):
+        if not data:
+            return None
+        try:
+            return data.strftime(fmt)
+        except Exception:
+            return None
+
+    r.data_auditoria_br = parse_data(r.data_auditoria, '%d/%m/%Y') or ''
+    r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M') or ''
+    r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M') or ''
+    r.fatura_de_br = parse_data(r.fatura_de, '%d/%m/%Y') or ''
+    r.fatura_ate_br = parse_data(r.fatura_ate, '%d/%m/%Y') or ''
+    r.data_registro_br = parse_data(r.data_registro, '%d/%m/%Y') or ''
+
+    r.total_apresentado = 0
+    r.total_glosa_medico = 0
+    r.total_glosa_enfermagem = 0
+    r.total_liberado = 0
+
+    for i in range(1, 11):
+        va = getattr(r, f'valor_apresentado_{i}', None) or 0
+        gm = getattr(r, f'glosa_medico_{i}', None) or 0
+        ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+        try: va = float(va)
+        except: va = 0
+        try: gm = float(gm)
+        except: gm = 0
+        try: ge = float(ge)
+        except: ge = 0
+
+        vl = va - gm - ge
+        setattr(r, f'valor_liberado_{i}', vl)
+
+        r.total_apresentado += va
+        r.total_glosa_medico += gm
+        r.total_glosa_enfermagem += ge
+        r.total_liberado += vl
+
+    # ✅ Garante compatibilidade com Render
+    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
+
+    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
+
+    options = {
+        'enable-local-file-access': '',  # mantém, mas só é útil localmente
+        'page-size': 'A4',
+        'margin-top': '10mm',
+        'margin-right': '5mm',
+        'margin-bottom': '10mm',
+        'margin-left': '5mm',
+        'encoding': 'UTF-8',
+    }
+
+    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -551,56 +592,6 @@ def salvar_auditor():
 def listar_auditores():
     auditores = Auditor.query.all()
     return jsonify([{'nome': a.nome, 'matricula': a.matricula} for a in auditores])
-
-@main.route('/imprimir/<int:id>')
-@login_required
-def imprimir(id):
-    r = Auditoria.query.get_or_404(id)
-
-    # Conversão de datas
-    r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
-    r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-    r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-    r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
-    r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-
-    # Datas formatadas
-    r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
-    r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
-    r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
-    r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
-    r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
-    r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else '____/____/______'
- # Logo com fallback
-    try:
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
-        print("📂 CAMINHO DO LOGO:", logo_path)
-        print("📎 EXISTE?", os.path.exists(logo_path))
-
-        with open(logo_path, "rb") as image_file:
-            logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-        logo_url = f"data:image/png;base64,{logo_base64}"
-    except Exception as e:
-        print("⚠️ Erro ao carregar logo local:", e)
-        logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-
-    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
-    
-
-    options = {
-        'enable-local-file-access': '',
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-right': '5mm',
-        'margin-bottom': '10mm',
-        'margin-left': '5mm',
-        'encoding': 'UTF-8',
-    }
-
-    pdfkit.from_string(..., configuration=current_app.config['PDFKIT_CONFIG'])
-    return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
-
-
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
@@ -612,20 +603,55 @@ def imprimir_lote():
     id_list = [int(x) for x in ids.split(',') if x.isdigit()]
     registros = Auditoria.query.filter(Auditoria.id.in_(id_list)).all()
 
-    # Preparar registros
     for r in registros:
         r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
         r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
         r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
         r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
         r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-        r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
-        r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
-        r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
-        r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
-        r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
+        r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else ''
 
-    rendered = render_template('pdf_lote.html', registros=registros)
+        r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else ''
+        r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else ''
+        r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else ''
+        r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else ''
+        r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else ''
+
+        r.total_apresentado = 0
+        r.total_glosa_medico = 0
+        r.total_glosa_enfermagem = 0
+        r.total_liberado = 0
+
+        for i in range(1, 11):
+            va = getattr(r, f'valor_apresentado_{i}', None) or 0
+            gm = getattr(r, f'glosa_medico_{i}', None) or 0
+            ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+            try: va = float(va)
+            except: va = 0
+            try: gm = float(gm)
+            except: gm = 0
+            try: ge = float(ge)
+            except: ge = 0
+
+            vl = va - gm - ge
+            setattr(r, f'valor_liberado_{i}', vl)
+
+            r.total_apresentado += va
+            r.total_glosa_medico += gm
+            r.total_glosa_enfermagem += ge
+            r.total_liberado += vl
+
+    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
+    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+
+    import platform
+    if platform.system() == "Windows":
+        path_wkhtmltopdf = r'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe'
+    else:
+        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
     options = {
         'enable-local-file-access': '',
@@ -637,8 +663,9 @@ def imprimir_lote():
         'encoding': 'UTF-8'
     }
 
-    pdfkit.from_string(..., configuration=current_app.config['PDFKIT_CONFIG'])
+    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+
 
 @main.route('/sair')
 def sair():

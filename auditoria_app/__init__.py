@@ -44,3 +44,20 @@ def create_app():
         return getattr(obj, attr)
 
     return app  # ✅ ESTA LINHA ESTAVA FALTANDO
+
+if platform.system() == "Windows":
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'  # Caminho típico no Linux Render
+
+pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
+options = {
+    'enable-local-file-access': '',
+    'page-size': 'A4',
+    'margin-top': '10mm',
+    'margin-right': '10mm',
+    'margin-bottom': '10mm',
+    'margin-left': '10mm',
+    'encoding': 'UTF-8'
+}
