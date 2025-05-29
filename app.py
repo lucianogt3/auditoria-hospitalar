@@ -1,7 +1,7 @@
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+from auditoria_app import create_app
 
-    # ... suas configurações, blueprints, etc.
+app = create_app()
+print("SECRET_KEY:", app.config.get("SECRET_KEY"))
 
-    return app  # ✅ ESSA LINHA É OBRIGATÓRIA
+if __name__ == '__main__':
+    app.run(debug=True)
