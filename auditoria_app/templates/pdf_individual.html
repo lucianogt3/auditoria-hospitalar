@@ -39,20 +39,17 @@
     .center { text-align: center; }
     .sub-label { font-size: 12px; font-style: italic; color: #333; }
     .assinatura td { height: 60px; font-size: 12px; }
-    .page-break { page-break-after: always; }
   </style>
 </head>
 <body>
+
 <div class="logo-container">
   <img src="{{ logo_url }}" alt="Logo" style="height: 60px;">
 </div>
 
-
-</div>
-
 <h3>Relatório de Auditoria Hospitalar</h3>
 
-<table>
+<table class="dados-principais">
   <tr><td class="bold">Título:</td><td colspan="3">RAH - Relatório de Auditoria Hospitalar</td><td class="bold">Fase:</td><td>{{ format_text(r.fase) }}</td></tr>
   <tr><td class="bold">Tipo de Anexo:</td><td colspan="5">Registro</td></tr>
   <tr><td class="bold">Número e Versão do Anexo:</td><td colspan="5">RGQ-0146 - V.0</td></tr>
@@ -142,32 +139,32 @@
 <p><strong>* Não se aplica:</strong></p>
 
 <table class="assinatura">
-  <tr>
-    <td>
-      <strong>De acordo Auditoria/Faturamento Prestador:</strong><br><br>
-      Data: {{ format_text(r.data_registro_br) }}<br><br>
-      <br>
-      <br>
-      <br>
-      <br>
-      Assinatura e carimbo: ___________________________________________<br>
-    </td>
-    <td>
-      <strong>Auditoria Operadora:</strong><br><br>
-      Data: {{ format_text(r.data_registro_br) }}<br>
-      Médico Auditor:<br>
-      Assinatura e carimbo: ___________________________________________<br><br>
-      <br>
-      Enfermeiro Auditor:
-      <br>
-      Assinatura e carimbo: ___________________________________________
-<br>
-<br>
-    </td>
+      <tr>
+        <td>
+          <strong>De acordo Auditoria/Faturamento Prestador:</strong><br><br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          <br>
+          Data: {{ format_text(r.data_registro_br) }}<br>
+          Assinatura e carimbo: ___________________________________________<br>
+        </td>
+        <td>
+          <strong>Auditoria Operadora:</strong><br>
+          Data: {{ format_text(r.data_registro_br) }}<br>
+          Médico Auditor:<br>
+          Assinatura e carimbo: ___________________________________________<br><br>
+          <br>
+          <br>
+          <br>
+
+          Enfermeiro Auditor:<br>
+          Assinatura e carimbo: ___________________________________________<br>
+        </td>
   </tr>
 </table>
 
-<div class="page-break"></div>
 </body>
-
 </html>

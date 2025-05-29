@@ -3,3 +3,9 @@
 thead td {
   background-color: #e9ecef; /* tom de cinza claro */
 }
+
+.dados-principais td {
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 6px;
+}

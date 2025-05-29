@@ -48,7 +48,7 @@ def create_app():
 if platform.system() == "Windows":
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
-    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'  # Caminho típico no Linux Render
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
 
 pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
@@ -56,8 +56,8 @@ options = {
     'enable-local-file-access': '',
     'page-size': 'A4',
     'margin-top': '10mm',
-    'margin-right': '10mm',
+    'margin-right': '5mm',
     'margin-bottom': '10mm',
-    'margin-left': '10mm',
-    'encoding': 'UTF-8'
+    'margin-left': '5mm',
+    'encoding': 'UTF-8',
 }

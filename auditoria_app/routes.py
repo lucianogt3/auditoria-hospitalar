@@ -3,8 +3,7 @@ from flask_login import login_required
 from .models import Auditoria, Prestador, Auditor
 from . import db
 from io import BytesIO
-from weasyprint import HTML
-import locale
+import pdfkit
 from datetime import datetime
 import pandas as pd
 from flask_login import logout_user
@@ -13,6 +12,11 @@ from google.oauth2.service_account import Credentials
 import os
 import platform
 from flask_login import current_user
+import locale
+from flask import Response
+from flask import make_response
+
+
 
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -398,13 +402,15 @@ def imprimir(id):
         r.total_glosa_enfermagem += ge
         r.total_liberado += vl
 
-    # ✅ Garante compatibilidade com Render
     logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-
     rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
 
+    # Caminho para o wkhtmltopdf (ajuste conforme seu sistema)
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
     options = {
-        'enable-local-file-access': '',  # mantém, mas só é útil localmente
+        'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
         'margin-right': '5mm',
@@ -413,7 +419,7 @@ def imprimir(id):
         'encoding': 'UTF-8',
     }
 
-    pdf = HTML(string=rendered).write_pdf()
+    pdf = pdfkit.from_string(rendered, False, configuration=config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
@@ -592,30 +598,43 @@ def salvar_auditor():
 def listar_auditores():
     auditores = Auditor.query.all()
     return jsonify([{'nome': a.nome, 'matricula': a.matricula} for a in auditores])
+
+
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
-    ids = request.args.get('ids')
-    if not ids:
-        flash("Nenhum registro selecionado para impressão.", "warning")
+    ids_param = request.args.get('ids')
+    if not ids_param:
+        flash("Nenhum ID informado para impressão.", "warning")
         return redirect(url_for('main.relatorio'))
 
-    id_list = [int(x) for x in ids.split(',') if x.isdigit()]
-    registros = Auditoria.query.filter(Auditoria.id.in_(id_list)).all()
+    try:
+        ids = [int(x) for x in ids_param.split(',')]
+    except ValueError:
+        flash("IDs inválidos.", "danger")
+        return redirect(url_for('main.relatorio'))
+
+    registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
+
+    if not registros:
+        flash("Nenhum registro encontrado para os IDs informados.", "info")
+        return redirect(url_for('main.relatorio'))
 
     for r in registros:
-        r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
-        r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-        r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-        r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
-        r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-        r.data_registro_br = r.data_registro.strftime('%d/%m/%Y') if r.data_registro else ''
+        def parse_data(data, fmt='%d/%m/%Y'):
+            if not data:
+                return ''
+            try:
+                return data.strftime(fmt)
+            except Exception:
+                return ''
 
-        r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else ''
-        r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else ''
-        r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else ''
-        r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else ''
-        r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else ''
+        r.data_auditoria_br = parse_data(r.data_auditoria)
+        r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
+        r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
+        r.fatura_de_br = parse_data(r.fatura_de)
+        r.fatura_ate_br = parse_data(r.fatura_ate)
+        r.data_registro_br = parse_data(r.data_registro)
 
         r.total_apresentado = 0
         r.total_glosa_medico = 0
@@ -642,29 +661,41 @@ def imprimir_lote():
             r.total_glosa_enfermagem += ge
             r.total_liberado += vl
 
-    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+    def format_text(value):
+        if value is not None and value != 'None' and value != 'N/A':
+            return value
+        return ''
 
-    import platform
+    def format_currency(value):
+        if value is not None and value != 0:
+            return 'R$ {:,.2f}'.format(value).replace(',', 'v').replace('.', ',').replace('v', '.')
+        return ''
+
+    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
+    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url, format_text=format_text, format_currency=format_currency)
+
     if platform.system() == "Windows":
-        path_wkhtmltopdf = r'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe'
+        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
     else:
         path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
 
-    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
     options = {
         'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
-        'margin-right': '10mm',
+        'margin-right': '5mm',
         'margin-bottom': '10mm',
-        'margin-left': '10mm',
-        'encoding': 'UTF-8'
+        'margin-left': '5mm',
+        'encoding': 'UTF-8',
     }
 
-    pdf = HTML(string=rendered).write_pdf()
-    return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+    pdf = pdfkit.from_string(rendered, False, configuration=config, options=options)
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=lote_auditoria.pdf'
+    return response
 
 
 @main.route('/sair')
