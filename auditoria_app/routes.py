@@ -3,7 +3,7 @@ from flask_login import login_required
 from .models import Auditoria, Prestador, Auditor
 from . import db
 from io import BytesIO
-import pdfkit
+from weasyprint import HTML
 import locale
 from datetime import datetime
 import pandas as pd
@@ -413,7 +413,7 @@ def imprimir(id):
         'encoding': 'UTF-8',
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdf = HTML(string=rendered).write_pdf()
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
@@ -663,7 +663,7 @@ def imprimir_lote():
         'encoding': 'UTF-8'
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdf = HTML(string=rendered).write_pdf()
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
 
 

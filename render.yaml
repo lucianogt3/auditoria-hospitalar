@@ -7,3 +7,5 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     autoDeploy: true
+    buildCommand: ./render-build.sh && pip install -r requirements.txt
+    startCommand: gunicorn auditoria_app:app
