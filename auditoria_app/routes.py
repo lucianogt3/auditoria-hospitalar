@@ -15,9 +15,7 @@ from flask_login import current_user
 import locale
 from flask import Response
 from flask import make_response
-
-
-
+from flask import render_template_string
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
@@ -358,6 +356,7 @@ def editar(id):
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
 @main.route('/imprimir/<int:id>')
+@main.route('/imprimir/<int:id>')
 @login_required
 def imprimir(id):
     r = Auditoria.query.get_or_404(id)
@@ -402,10 +401,10 @@ def imprimir(id):
         r.total_glosa_enfermagem += ge
         r.total_liberado += vl
 
-    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-    rendered = render_template("pdf_individual.html", r=r, logo_url=logo_url)
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
 
-    # Caminho para o wkhtmltopdf (ajuste conforme seu sistema)
+    html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
+
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
@@ -419,7 +418,7 @@ def imprimir(id):
         'encoding': 'UTF-8',
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=config, options=options)
+    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
@@ -661,19 +660,10 @@ def imprimir_lote():
             r.total_glosa_enfermagem += ge
             r.total_liberado += vl
 
-    def format_text(value):
-        if value is not None and value != 'None' and value != 'N/A':
-            return value
-        return ''
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
+    html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
-    def format_currency(value):
-        if value is not None and value != 0:
-            return 'R$ {:,.2f}'.format(value).replace(',', 'v').replace('.', ',').replace('v', '.')
-        return ''
-
-    logo_url = url_for('static', filename='img/logo_ipasgo.png', _external=True)
-    rendered = render_template('pdf_lote.html', registros=registros, logo_url=logo_url, format_text=format_text, format_currency=format_currency)
-
+    # Detecta sistema operacional
     if platform.system() == "Windows":
         path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
     else:
@@ -691,11 +681,8 @@ def imprimir_lote():
         'encoding': 'UTF-8',
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=config, options=options)
-    response = make_response(pdf)
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'inline; filename=lote_auditoria.pdf'
-    return response
+    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
+    return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
 
 
 @main.route('/sair')
