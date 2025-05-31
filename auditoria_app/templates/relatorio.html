@@ -2,29 +2,41 @@
 {% block title %}Registros de Auditoria{% endblock %}
 
 {% block content %}
-<h3 class="mb-4">📁 Registros de Auditoria Hospitalar</h3>
+{# Título centralizado, com a nova classe de estilo e ícone aprimorado #}
+<h3 class="mb-4 text-center relatorio-page-title"><i class="fas fa-clipboard-list"></i> Registros de Auditoria Hospitalar</h3>
 
-<div class="relatorio-header">
-  <!-- Filtro de Data à esquerda -->
-  <form method="get" action="{{ url_for('main.relatorio') }}" class="filtro-data-form">
-    <label for="data">Data:</label>
-    <input type="date" id="data" name="data" value="{{ request.args.get('data', '') }}">
-    <button type="submit" class="btn btn-sm btn-secondary">🔍</button>
-    <a href="{{ url_for('main.relatorio') }}" class="btn btn-sm btn-outline-dark">↺</a>
+<div class="relatorio-header d-flex flex-wrap justify-content-between align-items-center mb-3 test-deploy-indicator">
+  <form method="get" action="{{ url_for('main.relatorio') }}" class="d-flex align-items-center gap-2 mb-2">
+    <label for="data" class="me-1">Data:</label>
+    {# Filtro de Data: Removido form-control-sm e adicionado form-control-lg para maior tamanho #}
+    <input type="date" id="data" name="data" value="{{ request.args.get('data', '') }}" class="form-control form-control-lg">
+    <button type="submit" class="btn btn-lg btn-secondary" title="Filtrar por Data">🔍</button> {# Botão de filtro maior #}
+    <a href="{{ url_for('main.relatorio') }}" class="btn btn-lg btn-outline-dark" title="Limpar Filtro">↺</a> {# Botão de limpar filtro maior #}
   </form>
 
-  <!-- Botões de ação à direita -->
-  <div class="btn-group">
-    <button id="btnImprimir" class="btn btn-danger btn-sm">🖨️ Imprimir Lote</button>
-    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalExportar">
-      ⬇️ Exportar Excel
+  <div class="d-flex flex-wrap gap-2">
+    {# Botões de ação globais: Removido btn-sm para usar o tamanho padrão (maior) #}
+    <button id="btnImprimir" class="btn btn-danger" title="Imprimir Registros Selecionados em Lote"><i class="fas fa-print"></i> Imprimir Lote</button>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExportar" title="Exportar Registros para Excel">
+      <i class="fas fa-file-excel"></i> Exportar Excel
     </button>
-    <button id="btnEnviarSheets" class="btn btn-primary btn-sm">📤 Enviar para Sheets</button>
+    <button id="btnEnviarSheets" class="btn btn-primary" title="Enviar Registros Selecionados para o Google Sheets"><i class="fas fa-paper-plane"></i> Enviar para Sheets</button>
   </div>
 </div>
 
+{# Card contador de registros: Centralizado com mx-auto e col-auto #}
+<div class="row mb-4 justify-content-center">
+  <div class="col-auto"> {# col-auto para que a coluna se ajuste ao conteúdo e mx-auto para centralizar #}
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        {# Título do card renomeado #}
+        <h5 class="card-title text-center"><i class="fas fa-database"></i> Total de Registros</h5> {# Título do card centralizado #}
+        <p class="card-text fs-4 text-center">{{ total_registros }}</p> {# Número do card centralizado #}
+      </div>
+    </div>
+  </div>
+</div>
 
-<!-- Modal Exportar -->
 <div class="modal fade" id="modalExportar" tabindex="-1" aria-labelledby="modalExportarLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form method="get" action="{{ url_for('main.exportar_excel') }}">
@@ -55,7 +67,6 @@
   </div>
 </div>
 
-<!-- Tabela -->
 <form id="form-registros">
   <table class="table table-bordered table-striped table-hover">
     <thead class="table-light text-center align-middle">
@@ -85,14 +96,16 @@
         <td>{{ reg.nome_beneficiario }}</td>
         <td>R$ {{ '%.2f' | format(reg.total_apresentado or 0) | replace('.', ',') }}</td>
         <td class="text-center">
-          <a href="{{ url_for('main.editar', id=reg.id) }}" class="btn btn-sm btn-warning">✏️</a>
-          {% if reg.salvo %}
-            <a href="{{ url_for('main.visualizar', id=reg.id) }}" class="btn btn-sm btn-info">👁️</a>
-            <a href="{{ url_for('main.imprimir', id=reg.id) }}" class="btn btn-sm btn-secondary">🖨️</a>
-          {% else %}
-            <span class="badge bg-warning text-dark">Não salvo</span>
-          {% endif %}
-          <a href="{{ url_for('main.excluir', id=reg.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Deseja excluir este registro?')">🗑️</a>
+          <div class="d-flex flex-wrap justify-content-center gap-1">
+            <a href="{{ url_for('main.editar', id=reg.id) }}" class="btn btn-sm btn-warning" title="Editar Registro"><i class="fas fa-edit"></i></a>
+            {% if reg.salvo %}
+              <a href="{{ url_for('main.visualizar', id=reg.id) }}" class="btn btn-sm btn-info" title="Visualizar Detalhes"><i class="fas fa-eye"></i></a>
+              <a href="{{ url_for('main.imprimir', id=reg.id) }}" class="btn btn-sm btn-secondary" title="Imprimir PDF do Registro"><i class="fas fa-print"></i></a>
+            {% else %}
+              <span class="badge bg-warning text-dark">Não salvo</span>
+            {% endif %}
+            <a href="{{ url_for('main.excluir', id=reg.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir este registro?')" title="Excluir Registro"><i class="fas fa-trash-alt"></i></a>
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -100,37 +113,30 @@
   </table>
 </form>
 
-<!-- Script de seleção e envio para impressão -->
 <script>
-  // Selecionar todos os checkboxes
   document.getElementById("checkAll").addEventListener("change", function () {
     const checkboxes = document.querySelectorAll(".registro-checkbox");
     checkboxes.forEach(cb => cb.checked = this.checked);
   });
 
-  // Imprimir lote
   document.getElementById("btnImprimir").addEventListener("click", function () {
     const selecionados = Array.from(document.querySelectorAll(".registro-checkbox:checked"))
-                              .map(cb => cb.value);
+                               .map(cb => cb.value);
     if (selecionados.length === 0) {
       alert("Selecione pelo menos um registro para imprimir.");
       return;
     }
-
     const url = "{{ url_for('main.imprimir_lote') }}?ids=" + selecionados.join(",");
-
     window.open(url, '_blank');
   });
 
-  // Enviar registros selecionados para Google Sheets
   document.getElementById("btnEnviarSheets").addEventListener("click", function () {
     const selecionados = Array.from(document.querySelectorAll(".registro-checkbox:checked"))
-                              .map(cb => cb.value);
+                               .map(cb => cb.value);
     if (selecionados.length === 0) {
       alert("Selecione pelo menos um registro para enviar.");
       return;
     }
-
     const confirmar = confirm("Deseja enviar os registros selecionados para a planilha do Google Sheets?");
     if (!confirmar) return;
 

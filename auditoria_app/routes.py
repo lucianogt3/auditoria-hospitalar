@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from .models import Auditoria, Prestador, Auditor
-from . import db
+from . import db, pdfkit_config, options # <-- Importa pdfkit_config e options de __init__.py
 from io import BytesIO
 import pdfkit
 from datetime import datetime
@@ -11,24 +11,19 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 import platform
-from flask_login import current_user
 import locale
 from flask import Response
 from flask import make_response
 from flask import render_template_string
+
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
     locale.setlocale(locale.LC_ALL, '')
 
-# Detecta sistema operacional para configurar o caminho do wkhtmltopdf corretamente
-if platform.system() == "Windows":
-    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-else:
-    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
-# Inicializa a configuração do pdfkit
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+# REMOVIDO: O bloco de detecção de sistema operacional e inicialização de pdfkit.configuration
+# e options foi removido daqui, pois já está definido globalmente em __init__.py
+# e deve ser importado e reutilizado para evitar duplicação e inconsistências.
 
 main = Blueprint('main', __name__)
 
@@ -136,7 +131,7 @@ def dashboard():
 def relatorio():
     data_filtro = request.args.get('data')
 
-    query = Auditoria.query  # ❌ Removido o filtro por empresa inexistente
+    query = Auditoria.query
 
     if data_filtro:
         try:
@@ -146,8 +141,9 @@ def relatorio():
             flash("Data inválida no filtro.", "danger")
 
     registros = query.order_by(Auditoria.data_registro.desc()).all()
-    return render_template('relatorio.html', registros=registros)
+    total_registros = len(registros) # <-- Adicione esta linha
 
+    return render_template('relatorio.html', registros=registros, total_registros=total_registros)
 
 @main.route('/novo', methods=['GET'])
 @login_required
@@ -356,7 +352,6 @@ def editar(id):
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
 @main.route('/imprimir/<int:id>')
-@main.route('/imprimir/<int:id>')
 @login_required
 def imprimir(id):
     r = Auditoria.query.get_or_404(id)
@@ -405,20 +400,8 @@ def imprimir(id):
 
     html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
 
-    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-    options = {
-        'enable-local-file-access': '',
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-right': '5mm',
-        'margin-bottom': '10mm',
-        'margin-left': '5mm',
-        'encoding': 'UTF-8',
-    }
-
-    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
+    # Usa a configuração global importada de __init__.py
+    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
 
 @main.route('/formulario/primeiro')
@@ -663,25 +646,8 @@ def imprimir_lote():
     logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
     html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
-    # Detecta sistema operacional
-    if platform.system() == "Windows":
-        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    else:
-        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
-    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-    options = {
-        'enable-local-file-access': '',
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-right': '5mm',
-        'margin-bottom': '10mm',
-        'margin-left': '5mm',
-        'encoding': 'UTF-8',
-    }
-
-    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
+    # Usa a configuração global importada de __init__.py
+    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
 
 
@@ -757,4 +723,3 @@ def excluir_auditor(id):
     db.session.commit()
     flash('Auditor excluído com sucesso!', 'success')
     return redirect(url_for('main.cadastro_auditor'))
-
