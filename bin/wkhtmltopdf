@@ -1,0 +1,2 @@
+#!/bin/bash
+echo 'wkhtmltopdf binário Linux simulado'
