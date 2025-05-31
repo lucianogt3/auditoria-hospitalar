@@ -2,50 +2,177 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-title">📊 Dashboard de Auditoria</div>
-
-<form method="get" class="row g-3 mb-4">
-    <div class="col-auto">
-        <label for="mes" class="form-label">Filtrar por mês:</label>
-        <input type="month" name="mes" id="mes" class="form-control" value="{{ mes }}">
-    </div>
-    <div class="col-auto mt-auto">
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-    </div>
-</form>
-
-<div class="row text-white mb-4">
-    <div class="col-md-3"><div class="card bg-primary"><div class="card-body"><h5>Total Apresentado</h5><p class="fs-5">R$ {{ "%.2f"|format(total_apresentado) }}</p></div></div></div>
-    <div class="col-md-3"><div class="card bg-danger"><div class="card-body"><h5>Glosa Médico</h5><p class="fs-5">R$ {{ "%.2f"|format(total_glosa_medico) }}</p></div></div></div>
-    <div class="col-md-3"><div class="card bg-warning text-dark"><div class="card-body"><h5>Glosa Enfermagem</h5><p class="fs-5">R$ {{ "%.2f"|format(total_glosa_enfermagem) }}</p></div></div></div>
-    <div class="col-md-3"><div class="card bg-success"><div class="card-body"><h5>Total Liberado</h5><p class="fs-5">R$ {{ "%.2f"|format(total_liberado) }}</p></div></div></div>
+<div class="dashboard-title text-center my-4">
+  <h2>📊 Dashboard de Auditoria</h2>
 </div>
 
-<div class="mb-5"><canvas id="graficoTotais"></canvas></div>
+<!-- Filtro por mês -->
+<form method="get" class="row g-3 align-items-end mb-4">
+  <div class="col-md-3">
+    <label for="mes" class="form-label">Filtrar por mês:</label>
+    <input type="month" name="mes" id="mes" class="form-control" value="{{ mes }}">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+  </div>
+</form>
 
+<!-- Cards principais -->
+<div class="row text-white mb-4">
+  <div class="col-md-3">
+    <div class="card bg-primary">
+      <div class="card-body text-white">
+        <h5>Total Apresentado</h5>
+        <p class="fs-5">R$ {{ "%.2f"|format(total_apresentado) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-danger">
+      <div class="card-body text-white">
+        <h5>Glosa Médico</h5>
+        <p class="fs-5">R$ {{ "%.2f"|format(total_glosa_medico) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-dark">
+      <div class="card-body text-white">
+        <h5>Glosa Enfermagem</h5>
+        <p class="fs-5">R$ {{ "%.2f"|format(total_glosa_enfermagem) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success">
+      <div class="card-body text-white">
+        <h5>Total Liberado</h5>
+        <p class="fs-5">R$ {{ "%.2f"|format(total_liberado) }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cards adicionais -->
+<div class="row text-white mb-4">
+  <div class="col-md-3">
+    <div class="card bg-info">
+      <div class="card-body text-white">
+        <h5>Registros Auditados</h5>
+        <p class="fs-5">{{ total_registros }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-secondary">
+      <div class="card-body text-white">
+        <h5>Média por Registro</h5>
+        <p class="fs-5">R$ {{ "%.2f"|format(media_valor_apresentado) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-dark">
+      <div class="card-body text-white">
+        <h5>% Glosa Total</h5>
+        <p class="fs-5"> {{ "{:.1f}".format(percentual_glosa) }}%</p>
+
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success">
+      <div class="card-body text-white">
+        <h5>% Liberado</h5>
+        <p class="fs-5">{{ "%.1f"|format(percentual_liberado) }}%</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mb-5">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header text-center">
+        <strong>Distribuição dos Valores</strong>
+      </div>
+      <div class="card-body">
+        <canvas id="graficoTotais"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header text-center">
+        <strong>Percentual por Tipo de Resultado</strong>
+      </div>
+      <div class="card-body">
+        <canvas id="graficoPizza"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('graficoTotais').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Apresentado', 'Glosa Médico', 'Glosa Enfermagem', 'Liberado'],
-            datasets: [{
-                label: 'Valores (R$)',
-                data: [
-                    {{ total_apresentado or 0 }},
-                    {{ total_glosa_medico or 0 }},
-                    {{ total_glosa_enfermagem or 0 }},
-                    {{ total_liberado or 0 }}
-                ],
-                backgroundColor: ['#0d6efd', '#dc3545', '#ffc107', '#198754']
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
+  const ctx = document.getElementById('graficoTotais').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Apresentado', 'Glosa Médico', 'Glosa Enfermagem', 'Liberado'],
+      datasets: [{
+        label: 'Valores (R$)',
+        data: [
+          {{ total_apresentado or 0 }},
+          {{ total_glosa_medico or 0 }},
+          {{ total_glosa_enfermagem or 0 }},
+          {{ total_liberado or 0 }}
+        ],
+        backgroundColor: ['#0d6efd', '#dc3545', '#ffc107', '#198754']
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'Distribuição dos Valores',
+          font: { size: 18 }
         }
-    });
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  const ctxPizza = document.getElementById('graficoPizza').getContext('2d');
+  new Chart(ctxPizza, {
+    type: 'pie',
+    data: {
+      labels: ['Glosa Médico', 'Glosa Enfermagem', 'Liberado'],
+      datasets: [{
+        label: 'Distribuição',
+        data: [
+          {{ total_glosa_medico or 0 }},
+          {{ total_glosa_enfermagem or 0 }},
+          {{ total_liberado or 0 }}
+        ],
+        backgroundColor: ['#dc3545', '#ffc107', '#198754']
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: false
+        }
+      }
+    }
+  });
 </script>
 {% endblock %}

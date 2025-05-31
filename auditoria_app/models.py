@@ -4,12 +4,13 @@ from sqlalchemy import DateTime
 from flask_login import UserMixin
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)  # <-- novo
-    password_hash = db.Column(db.String(150), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
     email_confirmed = db.Column(db.Boolean, default=False)          # <-- novo
     confirmation_token = db.Column(db.String(255), nullable=True)   # <-- novo
 
@@ -105,4 +106,6 @@ class Auditoria(db.Model):
     acomodacao = db.Column(db.String(50))
     motivo_glosa = db.Column(db.Text)
 
+    data_registro = db.Column(db.DateTime, default=datetime.utcnow)
+    
     salvo = db.Column(db.Boolean, default=False)

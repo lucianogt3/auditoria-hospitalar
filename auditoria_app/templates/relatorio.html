@@ -4,14 +4,25 @@
 {% block content %}
 <h3 class="mb-4">📁 Registros de Auditoria Hospitalar</h3>
 
-<!-- Botões -->
-<div class="mb-3 d-flex justify-content-end gap-2">
-  <button id="btnImprimir" class="btn btn-danger">🖨️ Imprimir Lote</button>
-  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExportar">
-    ⬇️ Exportar Excel
-  </button>
-  <button id="btnEnviarSheets" class="btn btn-primary">📤 Enviar para Sheets</button>
+<div class="relatorio-header">
+  <!-- Filtro de Data à esquerda -->
+  <form method="get" action="{{ url_for('main.relatorio') }}" class="filtro-data-form">
+    <label for="data">Data:</label>
+    <input type="date" id="data" name="data" value="{{ request.args.get('data', '') }}">
+    <button type="submit" class="btn btn-sm btn-secondary">🔍</button>
+    <a href="{{ url_for('main.relatorio') }}" class="btn btn-sm btn-outline-dark">↺</a>
+  </form>
+
+  <!-- Botões de ação à direita -->
+  <div class="btn-group">
+    <button id="btnImprimir" class="btn btn-danger btn-sm">🖨️ Imprimir Lote</button>
+    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalExportar">
+      ⬇️ Exportar Excel
+    </button>
+    <button id="btnEnviarSheets" class="btn btn-primary btn-sm">📤 Enviar para Sheets</button>
+  </div>
 </div>
+
 
 <!-- Modal Exportar -->
 <div class="modal fade" id="modalExportar" tabindex="-1" aria-labelledby="modalExportarLabel" aria-hidden="true">
@@ -50,8 +61,7 @@
     <thead class="table-light text-center align-middle">
       <tr>
         <th><input type="checkbox" id="checkAll"></th>
-        <th>Data Auditoria</th>
-        <th>Mês Referência</th>
+        <th>Data Registro</th>
         <th>Auditor</th>
         <th>Prestador</th>
         <th>Cód. Prestador</th>
@@ -68,8 +78,7 @@
           <input type="checkbox" class="registro-checkbox" value="{{ reg.id }}">
           {% endif %}
         </td>
-        <td class="text-center">{{ reg.data_auditoria }}</td>
-        <td class="text-center">{{ reg.data_auditoria.strftime('%Y-%m') if reg.data_auditoria else '' }}</td>
+        <td class="text-center">{{ reg.data_registro.strftime('%d/%m/%Y') if reg.data_registro else '' }}</td>
         <td>{{ reg.auditor }}</td>
         <td>{{ reg.nome_prestador }}</td>
         <td>{{ reg.cod_prestador }}</td>

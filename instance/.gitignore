@@ -1,5 +1,0 @@
-# Ignorar arquivos sensíveis
-.env
-*.pyc
-__pycache__/
-auditoria.db

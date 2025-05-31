@@ -1,0 +1,18 @@
+# Ignorar arquivos sensíveis
+.env
+*.pyc
+__pycache__/
+credentials/
+*.json
+
+# Ignorar banco de dados SQLite
+instance/auditoria.db
+
+# Ignorar configurações locais do VSCode
+.vscode/
+
+# Ignorar arquivos temporários e cache do sistema
+*.log
+*.sqlite3
+.DS_Store
+Thumbs.db

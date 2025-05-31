@@ -22,6 +22,7 @@
         <th>Nome</th>
         <th>Código</th>
         <th>Status</th>
+        <th>Ações</th>
       </tr>
     </thead>
     <tbody>
@@ -30,6 +31,11 @@
         <td>{{ p.nome }}</td>
         <td>{{ p.codigo }}</td>
         <td>{{ 'Ativo' if p.ativo else 'Inativo' }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('main.excluir_prestador', id=p.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir este prestador?');">
+            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

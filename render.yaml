@@ -1,5 +1,11 @@
-type: web
-name: auditoria-hospitalar
-runtime: python
-buildCommand: "pip install -r requirements.txt"
-startCommand: "gunicorn wsgi:app"
+services:
+  - type: web
+    name: auditoria-hospitalar
+    env: docker
+    plan: free
+    repo: https://github.com/lucianogt3/auditoria-hospitalar
+    branch: main
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    buildCommand: ./render-build.sh && pip install -r requirements.txt
+    startCommand: gunicorn auditoria_app:app

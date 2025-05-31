@@ -4,16 +4,31 @@ from .models import Auditoria, Prestador, Auditor
 from . import db
 from io import BytesIO
 import pdfkit
-import locale
 from datetime import datetime
 import pandas as pd
 from flask_login import logout_user
 import gspread
 from google.oauth2.service_account import Credentials
 import os
+import platform
+from flask_login import current_user
+import locale
+from flask import Response
+from flask import make_response
+from flask import render_template_string
+try:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_ALL, '')
 
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+# Detecta sistema operacional para configurar o caminho do wkhtmltopdf corretamente
+if platform.system() == "Windows":
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+# Inicializa a configuração do pdfkit
+pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
 main = Blueprint('main', __name__)
 
@@ -52,6 +67,15 @@ def parse_data(valor, formato):
             return None
     return None
 
+def limpar_inteiro(valor):
+    try:
+        if valor in [None, '', 'N/A']:
+            return None
+        return int(valor)
+    except (ValueError, TypeError):
+        return None
+
+
 @main.route('/')
 def index():
     return redirect(url_for('auth.login'))
@@ -63,26 +87,67 @@ def dashboard():
     query = Auditoria.query
 
     if mes:
-        query = query.filter(Auditoria.data_auditoria.like(f'{mes}-%'))
+        # Intervalo de datas do mês selecionado
+        data_inicio = f"{mes}-01"
+        ano, mes_num = map(int, mes.split("-"))
+
+        if mes_num == 12:
+            data_fim = f"{ano + 1}-01-01"
+        else:
+            data_fim = f"{ano}-{mes_num + 1:02d}-01"
+
+        query = query.filter(
+            Auditoria.data_auditoria >= data_inicio,
+            Auditoria.data_auditoria < data_fim
+        )
 
     relatorios = query.all()
+    
+    # Somatórios
     total_apresentado = sum([r.total_apresentado or 0 for r in relatorios])
     total_glosa_medico = sum([r.total_glosa_medico or 0 for r in relatorios])
     total_glosa_enfermagem = sum([r.total_glosa_enfermagem or 0 for r in relatorios])
     total_liberado = sum([r.total_liberado or 0 for r in relatorios])
+    
+    # Cálculos adicionais
+    total_glosa_total = total_glosa_medico + total_glosa_enfermagem
+    total_registros = len(relatorios)
 
-    return render_template('dashboard.html',
-                           total_apresentado=total_apresentado,
-                           total_glosa_medico=total_glosa_medico,
-                           total_glosa_enfermagem=total_glosa_enfermagem,
-                           total_liberado=total_liberado,
-                           mes=mes)
+    percentual_glosa = (total_glosa_total / total_apresentado * 100) if total_apresentado else 0
+    percentual_liberado = (total_liberado / total_apresentado * 100) if total_apresentado else 0
+    media_valor_apresentado = (total_apresentado / total_registros) if total_registros else 0
+
+    return render_template(
+        'dashboard.html',
+        mes=mes,
+        total_apresentado=total_apresentado,
+        total_glosa_medico=total_glosa_medico,
+        total_glosa_enfermagem=total_glosa_enfermagem,
+        total_liberado=total_liberado,
+        total_registros=total_registros,
+        percentual_glosa=percentual_glosa,
+        percentual_liberado=percentual_liberado,
+        media_valor_apresentado=media_valor_apresentado,
+        total_glosa_total=total_glosa_total
+    )
 
 @main.route('/relatorio')
 @login_required
 def relatorio():
-    registros = Auditoria.query.all()
+    data_filtro = request.args.get('data')
+
+    query = Auditoria.query  # ❌ Removido o filtro por empresa inexistente
+
+    if data_filtro:
+        try:
+            data_dt = datetime.strptime(data_filtro, '%Y-%m-%d')
+            query = query.filter(db.func.date(Auditoria.data_registro) == data_dt.date())
+        except ValueError:
+            flash("Data inválida no filtro.", "danger")
+
+    registros = query.order_by(Auditoria.data_registro.desc()).all()
     return render_template('relatorio.html', registros=registros)
+
 
 @main.route('/novo', methods=['GET'])
 @login_required
@@ -147,8 +212,8 @@ def salvar():
 
     for i in range(1, 101):
         setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
-        setattr(registro, f'qtd_apresentada_{i}', request.form.get(f'qtd_apresentada_{i}'))
-        setattr(registro, f'qtd_autorizada_{i}', request.form.get(f'qtd_autorizada_{i}'))
+        setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
+        setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
         setattr(registro, f'valor_apresentado_{i}', limpar_valor(request.form.get(f'valor_apresentado_{i}')))
         setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
         setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
@@ -256,8 +321,8 @@ def editar(id):
 
         for i in range(1, 101):
             setattr(registro, f'grupo_{i}', request.form.get(f'grupo_{i}'))
-            setattr(registro, f'qtd_apresentada_{i}', request.form.get(f'qtd_apresentada_{i}'))
-            setattr(registro, f'qtd_autorizada_{i}', request.form.get(f'qtd_autorizada_{i}'))
+            setattr(registro, f'qtd_apresentada_{i}', limpar_inteiro(request.form.get(f'qtd_apresentada_{i}')))
+            setattr(registro, f'qtd_autorizada_{i}', limpar_inteiro(request.form.get(f'qtd_autorizada_{i}')))
             setattr(registro, f'valor_apresentado_{i}', limpar_valor(request.form.get(f'valor_apresentado_{i}')))
             setattr(registro, f'glosa_medico_{i}', limpar_valor(request.form.get(f'glosa_medico_{i}')))
             setattr(registro, f'glosa_enfermagem_{i}', limpar_valor(request.form.get(f'glosa_enfermagem_{i}')))
@@ -281,46 +346,80 @@ def editar(id):
             'grupo': getattr(registro, f'grupo_{i}', ''),
             'qtd_apresentada': getattr(registro, f'qtd_apresentada_{i}', ''),
             'qtd_autorizada': getattr(registro, f'qtd_autorizada_{i}', ''),
-            'valor_apresentado': formatar_moeda(getattr(registro, f'valor_apresentado_{i}', 0)),
-            'glosa_medico': formatar_moeda(getattr(registro, f'glosa_medico_{i}', 0)),
-            'glosa_enfermagem': formatar_moeda(getattr(registro, f'glosa_enfermagem_{i}', 0)),
-            'valor_liberado': formatar_moeda(getattr(registro, f'valor_liberado_{i}', 0)),
+            'valor_apresentado': getattr(registro, f'valor_apresentado_{i}', '') or '',
+            'glosa_medico': getattr(registro, f'glosa_medico_{i}', '') or '',
+            'glosa_enfermagem': getattr(registro, f'glosa_enfermagem_{i}', '') or '',
+            'valor_liberado': getattr(registro, f'valor_liberado_{i}', '') or '',
+
         })
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
-
+@main.route('/imprimir/<int:id>')
 @main.route('/imprimir/<int:id>')
 @login_required
 def imprimir(id):
     r = Auditoria.query.get_or_404(id)
 
-    r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
-    r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-    r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-    r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
-    r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
+    def parse_data(data, fmt='%Y-%m-%d'):
+        if not data:
+            return None
+        try:
+            return data.strftime(fmt)
+        except Exception:
+            return None
 
-    r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
-    r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
-    r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
-    r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
-    r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
+    r.data_auditoria_br = parse_data(r.data_auditoria, '%d/%m/%Y') or ''
+    r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M') or ''
+    r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M') or ''
+    r.fatura_de_br = parse_data(r.fatura_de, '%d/%m/%Y') or ''
+    r.fatura_ate_br = parse_data(r.fatura_ate, '%d/%m/%Y') or ''
+    r.data_registro_br = parse_data(r.data_registro, '%d/%m/%Y') or ''
+
+    r.total_apresentado = 0
+    r.total_glosa_medico = 0
+    r.total_glosa_enfermagem = 0
+    r.total_liberado = 0
+
+    for i in range(1, 11):
+        va = getattr(r, f'valor_apresentado_{i}', None) or 0
+        gm = getattr(r, f'glosa_medico_{i}', None) or 0
+        ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+        try: va = float(va)
+        except: va = 0
+        try: gm = float(gm)
+        except: gm = 0
+        try: ge = float(ge)
+        except: ge = 0
+
+        vl = va - gm - ge
+        setattr(r, f'valor_liberado_{i}', vl)
+
+        r.total_apresentado += va
+        r.total_glosa_medico += gm
+        r.total_glosa_enfermagem += ge
+        r.total_liberado += vl
+
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
+
+    html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
+
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
     options = {
         'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
-        'margin-right': '10mm',
+        'margin-right': '5mm',
         'margin-bottom': '10mm',
-        'margin-left': '10mm',
+        'margin-left': '5mm',
         'encoding': 'UTF-8',
     }
 
-    rendered = render_template("pdf_individual.html", r=r)
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
     return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
-
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -361,56 +460,90 @@ def formulario_ultimo():
 @main.route('/exportar_excel')
 @login_required
 def exportar_excel():
+    from io import BytesIO
+
     mes = request.args.get('mes')
-    data_inicio = request.args.get('data_inicio')
-    data_fim = request.args.get('data_fim')
+    data_inicio_str = request.args.get('data_inicio')
+    data_fim_str = request.args.get('data_fim')
 
     query = Auditoria.query
-    if mes:
-        query = query.filter(Auditoria.data_auditoria.like(f'{mes}-%'))
+
+    # Parsing das datas
+    try:
+        if mes:
+            ano, mes_num = map(int, mes.split('-'))
+            data_inicio = datetime(ano, mes_num, 1)
+            if mes_num == 12:
+                data_fim = datetime(ano + 1, 1, 1)
+            else:
+                data_fim = datetime(ano, mes_num + 1, 1)
+        else:
+            data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d") if data_inicio_str else None
+            data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d") if data_fim_str else None
+            if data_fim:
+                data_fim = data_fim.replace(hour=23, minute=59, second=59)
+    except Exception as e:
+        flash("Erro ao interpretar as datas. Use o formato correto: AAAA-MM ou AAAA-MM-DD", "danger")
+        return redirect(url_for('main.relatorio'))
+
     if data_inicio:
         query = query.filter(Auditoria.data_auditoria >= data_inicio)
     if data_fim:
         query = query.filter(Auditoria.data_auditoria <= data_fim)
 
     registros = query.all()
+
     if not registros:
         flash("Nenhum dado encontrado para exportar com os filtros aplicados.", "warning")
         return redirect(url_for('main.relatorio'))
 
+    # Construção dos dados
     dados = []
     for r in registros:
-        data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-        data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-
         dados.append({
-            "AUDITOR": r.auditor or '',
-            "PRESTADOR": r.nome_prestador or '',
-            "BENEFICIÁRIO": r.nome_beneficiario or '',
-            "TIPO DE INTERNAÇÃO (CLÍNICA/CIRÚRGICA)": r.tipo_internacao or '',
-            "URGÊNCIA/ELETIVA": r.caracter_internacao or '',
-            "ACOMODAÇÃO": r.acomodacao or '',
-            "DATA ADMISSÃO": data_internacao.strftime('%d/%m/%Y') if data_internacao else '',
-            "DATA ALTA": data_alta.strftime('%d/%m/%Y') if data_alta else '',
-            "CID PRINCIPAL": r.cid_codigo or '',
-            "VALOR APRESENTADO": r.total_apresentado or 0,
-            "VALOR GLOSA ENF": r.total_glosa_enfermagem or 0,
-            "VALOR GL MED": r.total_glosa_medico or 0,
-            "MOTIVO DA GLOSA": r.motivo_glosa or ''
+            'ID': r.id,
+            'Auditor': r.auditor,
+            'Nome do Beneficiário': r.nome_beneficiario,
+            'Código do Beneficiário': r.cod_beneficiario,
+            'Código do Prestador': r.cod_prestador,
+            'Nome do Prestador': r.nome_prestador,
+            'Guia Principal': r.guia_principal,
+            'Data Internação': r.data_internacao.strftime("%d/%m/%Y %H:%M") if r.data_internacao else '',
+            'Hora Internação': r.hora_internacao,
+            'Data Alta': r.data_alta.strftime("%d/%m/%Y %H:%M") if r.data_alta else '',
+            'Hora Alta': r.hora_alta,
+            'Data Auditoria': r.data_auditoria.strftime("%d/%m/%Y") if r.data_auditoria else '',
+            'Tipo Internação': r.tipo_internacao,
+            'Caracter Internação': r.caracter_internacao,
+            'Parcial': r.parcial,
+            'Código Procedimento': r.cod_procedimento,
+            'Descrição Procedimento': r.descricao_procedimento,
+            'CID Código': r.cid_codigo,
+            'CID Descrição': r.cid_descricao,
+            'Fatura De': r.fatura_de.strftime("%d/%m/%Y") if r.fatura_de else '',
+            'Fatura Até': r.fatura_ate.strftime("%d/%m/%Y") if r.fatura_ate else '',
+            'Acomodação': r.acomodacao,
+            'Motivo Glosa': r.motivo_glosa,
+            'Total Apresentado': r.total_apresentado,
+            'Total Glosa Médico': r.total_glosa_medico,
+            'Total Glosa Enfermagem': r.total_glosa_enfermagem,
+            'Total Liberado': r.total_liberado,
+            'Data Registro': r.data_registro.strftime("%d/%m/%Y") if r.data_registro else ''
         })
 
     df = pd.DataFrame(dados)
+
+    # Exporta para Excel
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Auditoria')
+
     output.seek(0)
 
-    return send_file(
-        output,
-        download_name="lista_auditoria.xlsx",
-        as_attachment=True,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    return send_file(output,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     download_name='auditoria_completa.xlsx',
+                     as_attachment=True)
 
 @main.route('/excluir/<int:id>')
 @login_required
@@ -464,43 +597,93 @@ def salvar_auditor():
 def listar_auditores():
     auditores = Auditor.query.all()
     return jsonify([{'nome': a.nome, 'matricula': a.matricula} for a in auditores])
+
+
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
-    ids = request.args.get('ids')
-    if not ids:
-        flash("Nenhum registro selecionado para impressão.", "warning")
+    ids_param = request.args.get('ids')
+    if not ids_param:
+        flash("Nenhum ID informado para impressão.", "warning")
         return redirect(url_for('main.relatorio'))
 
-    id_list = [int(x) for x in ids.split(',') if x.isdigit()]
-    registros = Auditoria.query.filter(Auditoria.id.in_(id_list)).all()
+    try:
+        ids = [int(x) for x in ids_param.split(',')]
+    except ValueError:
+        flash("IDs inválidos.", "danger")
+        return redirect(url_for('main.relatorio'))
+
+    registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
+
+    if not registros:
+        flash("Nenhum registro encontrado para os IDs informados.", "info")
+        return redirect(url_for('main.relatorio'))
 
     for r in registros:
-        r.data_auditoria = parse_data(r.data_auditoria, '%Y-%m-%d')
-        r.data_internacao = parse_data(r.data_internacao, '%Y-%m-%dT%H:%M')
-        r.data_alta = parse_data(r.data_alta, '%Y-%m-%dT%H:%M')
-        r.fatura_de = parse_data(r.fatura_de, '%Y-%m-%d')
-        r.fatura_ate = parse_data(r.fatura_ate, '%Y-%m-%d')
-        r.data_auditoria_br = r.data_auditoria.strftime('%d/%m/%Y') if r.data_auditoria else 'N/A'
-        r.data_internacao_br = r.data_internacao.strftime('%d/%m/%Y %H:%M') if r.data_internacao else 'N/A'
-        r.data_alta_br = r.data_alta.strftime('%d/%m/%Y %H:%M') if r.data_alta else 'N/A'
-        r.fatura_de_br = r.fatura_de.strftime('%d/%m/%Y') if r.fatura_de else 'N/A'
-        r.fatura_ate_br = r.fatura_ate.strftime('%d/%m/%Y') if r.fatura_ate else 'N/A'
+        def parse_data(data, fmt='%d/%m/%Y'):
+            if not data:
+                return ''
+            try:
+                return data.strftime(fmt)
+            except Exception:
+                return ''
 
-    rendered = render_template('pdf_lote.html', registros=registros)
+        r.data_auditoria_br = parse_data(r.data_auditoria)
+        r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
+        r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
+        r.fatura_de_br = parse_data(r.fatura_de)
+        r.fatura_ate_br = parse_data(r.fatura_ate)
+        r.data_registro_br = parse_data(r.data_registro)
+
+        r.total_apresentado = 0
+        r.total_glosa_medico = 0
+        r.total_glosa_enfermagem = 0
+        r.total_liberado = 0
+
+        for i in range(1, 11):
+            va = getattr(r, f'valor_apresentado_{i}', None) or 0
+            gm = getattr(r, f'glosa_medico_{i}', None) or 0
+            ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+            try: va = float(va)
+            except: va = 0
+            try: gm = float(gm)
+            except: gm = 0
+            try: ge = float(ge)
+            except: ge = 0
+
+            vl = va - gm - ge
+            setattr(r, f'valor_liberado_{i}', vl)
+
+            r.total_apresentado += va
+            r.total_glosa_medico += gm
+            r.total_glosa_enfermagem += ge
+            r.total_liberado += vl
+
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
+    html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+
+    # Detecta sistema operacional
+    if platform.system() == "Windows":
+        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    else:
+        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
     options = {
         'enable-local-file-access': '',
         'page-size': 'A4',
         'margin-top': '10mm',
-        'margin-right': '10mm',
+        'margin-right': '5mm',
         'margin-bottom': '10mm',
-        'margin-left': '10mm',
-        'encoding': 'UTF-8'
+        'margin-left': '5mm',
+        'encoding': 'UTF-8',
     }
 
-    pdf = pdfkit.from_string(rendered, False, configuration=pdfkit_config, options=options)
+    pdf = pdfkit.from_string(html, False, configuration=config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+
 
 @main.route('/sair')
 def sair():
@@ -557,7 +740,21 @@ def enviar_sheets():
             f"R$ {r.total_glosa_medico:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',') if r.total_glosa_medico else '',
             r.motivo_glosa or ''
         ])
+@main.route('/excluir_prestador/<int:id>', methods=['POST'])
+def excluir_prestador(id):
+    prestador = Prestador.query.get_or_404(id)
+    db.session.delete(prestador)
+    db.session.commit()
+    flash('Prestador excluído com sucesso!', 'success')
+    return redirect(url_for('main.cadastro_prestador'))
 
     return jsonify(success=True)
 
+@main.route('/excluir_auditor/<int:id>', methods=['POST'])
+def excluir_auditor(id):
+    auditor = Auditor.query.get_or_404(id)
+    db.session.delete(auditor)
+    db.session.commit()
+    flash('Auditor excluído com sucesso!', 'success')
+    return redirect(url_for('main.cadastro_auditor'))
 
