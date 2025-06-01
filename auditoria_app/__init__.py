@@ -18,7 +18,7 @@ login_manager = LoginManager()
 
 # 📌 Detecta o caminho do wkhtmltopdf para Windows ou Render (Linux)
 if os.environ.get("RENDER"):
-    path_wkhtmltopdf = os.path.join(os.getcwd(), 'bin', 'wkhtmltopdf')
+    path_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
 elif platform.system() == "Windows":
     path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
