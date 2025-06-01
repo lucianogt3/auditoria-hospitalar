@@ -402,7 +402,8 @@ def imprimir(id):
         logo_base64 = base64.b64encode(f.read()).decode('utf-8')
 
     # ✅ Gera HTML
-    html = render_template('pdf_individual.html', r=r, logo_base64=logo_base64)
+    html = render_template('pdf_individual.html', registros=[r], logo_base64=logo_base64)
+
 
     # ✅ Gera PDF com base_url para suportar CSS local
     pdf = HTML(string=html, base_url=request.host_url).write_pdf()
