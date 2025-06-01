@@ -351,89 +351,81 @@ def editar(id):
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
-@main.route('/imprimir/<int:id>')
+@main.route('/imprimir-lote')
 @login_required
-def imprimir(id):
-    import platform
-    import pdfkit
-    from io import BytesIO
-    from flask import send_file, render_template
-
-    r = Auditoria.query.get_or_404(id)
-
-    def parse_data(data, fmt='%Y-%m-%d'):
-        if not data:
-            return None
-        try:
-            return data.strftime(fmt)
-        except Exception:
-            return None
-
-    r.data_auditoria_br = parse_data(r.data_auditoria, '%d/%m/%Y') or ''
-    r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M') or ''
-    r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M') or ''
-    r.fatura_de_br = parse_data(r.fatura_de, '%d/%m/%Y') or ''
-    r.fatura_ate_br = parse_data(r.fatura_ate, '%d/%m/%Y') or ''
-    r.data_registro_br = parse_data(r.data_registro, '%d/%m/%Y') or ''
-
-    r.total_apresentado = 0
-    r.total_glosa_medico = 0
-    r.total_glosa_enfermagem = 0
-    r.total_liberado = 0
-
-    for i in range(1, 11):
-        va = getattr(r, f'valor_apresentado_{i}', None) or 0
-        gm = getattr(r, f'glosa_medico_{i}', None) or 0
-        ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
-
-        try:
-            va = float(va)
-        except:
-            va = 0
-        try:
-            gm = float(gm)
-        except:
-            gm = 0
-        try:
-            ge = float(ge)
-        except:
-            ge = 0
-
-        vl = va - gm - ge
-        setattr(r, f'valor_liberado_{i}', vl)
-
-        r.total_apresentado += va
-        r.total_glosa_medico += gm
-        r.total_glosa_enfermagem += ge
-        r.total_liberado += vl
-
-    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
-    html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
-
-    # Configuração do caminho do wkhtmltopdf
-    if platform.system() == "Windows":
-        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    else:
-        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
-    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-    # Opções do PDF
-    options = {
-        'enable-local-file-access': None,
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-bottom': '10mm',
-        'margin-left': '10mm',
-        'margin-right': '10mm'
-    }
+def imprimir_lote():
+    ids_param = request.args.get('ids')
+    if not ids_param:
+        flash("Nenhum ID informado para impressão.", "warning")
+        return redirect(url_for('main.relatorio'))
 
     try:
-        pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
-        return send_file(BytesIO(pdf), download_name="auditoria.pdf", as_attachment=True)
-    except Exception as e:
-        print(f"Erro ao gerar PDF: {e}")
-        return f"Erro ao gerar PDF: {e}", 500
+        ids = [int(x) for x in ids_param.split(',')]
+    except ValueError:
+        flash("IDs inválidos.", "danger")
+        return redirect(url_for('main.relatorio'))
+
+    registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
+
+    if not registros:
+        flash("Nenhum registro encontrado para os IDs informados.", "info")
+        return redirect(url_for('main.relatorio'))
+
+    for r in registros:
+        def parse_data(data, fmt='%d/%m/%Y'):
+            if not data:
+                return ''
+            try:
+                return data.strftime(fmt)
+            except Exception:
+                return ''
+
+        r.data_auditoria_br = parse_data(r.data_auditoria)
+        r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
+        r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
+        r.fatura_de_br = parse_data(r.fatura_de)
+        r.fatura_ate_br = parse_data(r.fatura_ate)
+        r.data_registro_br = parse_data(r.data_registro)
+
+        r.total_apresentado = 0
+        r.total_glosa_medico = 0
+        r.total_glosa_enfermagem = 0
+        r.total_liberado = 0
+
+        for i in range(1, 11):
+            va = getattr(r, f'valor_apresentado_{i}', None) or 0
+            gm = getattr(r, f'glosa_medico_{i}', None) or 0
+            ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+            try: va = float(va)
+            except: va = 0
+            try: gm = float(gm)
+            except: gm = 0
+            try: ge = float(ge)
+            except: ge = 0
+
+            vl = va - gm - ge
+            setattr(r, f'valor_liberado_{i}', vl)
+
+            r.total_apresentado += va
+            r.total_glosa_medico += gm
+            r.total_glosa_enfermagem += ge
+            r.total_liberado += vl
+
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
+    html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+
+    options = {
+        'page-size': 'A4',
+        'encoding': 'UTF-8',
+        'no-outline': None,
+        'quiet': '',
+        'enable-local-file-access': '',
+        'load-error-handling': 'ignore'
+    }
+
+    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
+    return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
 
 
 @main.route('/formulario/primeiro')
@@ -612,101 +604,6 @@ def salvar_auditor():
 def listar_auditores():
     auditores = Auditor.query.all()
     return jsonify([{'nome': a.nome, 'matricula': a.matricula} for a in auditores])
-
-
-@main.route('/imprimir-lote')
-@login_required
-def imprimir_lote():
-    import platform
-    import pdfkit
-    from io import BytesIO
-    from flask import request, flash, redirect, url_for, render_template, send_file
-
-    ids_param = request.args.get('ids')
-    if not ids_param:
-        flash("Nenhum ID informado para impressão.", "warning")
-        return redirect(url_for('main.relatorio'))
-
-    try:
-        ids = [int(x) for x in ids_param.split(',')]
-    except ValueError:
-        flash("IDs inválidos.", "danger")
-        return redirect(url_for('main.relatorio'))
-
-    registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
-
-    if not registros:
-        flash("Nenhum registro encontrado para os IDs informados.", "info")
-        return redirect(url_for('main.relatorio'))
-
-    for r in registros:
-        def parse_data(data, fmt='%d/%m/%Y'):
-            if not data:
-                return ''
-            try:
-                return data.strftime(fmt)
-            except Exception:
-                return ''
-
-        r.data_auditoria_br = parse_data(r.data_auditoria)
-        r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
-        r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
-        r.fatura_de_br = parse_data(r.fatura_de)
-        r.fatura_ate_br = parse_data(r.fatura_ate)
-        r.data_registro_br = parse_data(r.data_registro)
-
-        r.total_apresentado = 0
-        r.total_glosa_medico = 0
-        r.total_glosa_enfermagem = 0
-        r.total_liberado = 0
-
-        for i in range(1, 11):
-            va = getattr(r, f'valor_apresentado_{i}', None) or 0
-            gm = getattr(r, f'glosa_medico_{i}', None) or 0
-            ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
-
-            try: va = float(va)
-            except: va = 0
-            try: gm = float(gm)
-            except: gm = 0
-            try: ge = float(ge)
-            except: ge = 0
-
-            vl = va - gm - ge
-            setattr(r, f'valor_liberado_{i}', vl)
-
-            r.total_apresentado += va
-            r.total_glosa_medico += gm
-            r.total_glosa_enfermagem += ge
-            r.total_liberado += vl
-
-    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
-    html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
-
-    # Caminho do wkhtmltopdf para Render ou local
-    if platform.system() == "Windows":
-        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    else:
-        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
-    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-    options = {
-        'enable-local-file-access': None,
-        'page-size': 'A4',
-        'margin-top': '10mm',
-        'margin-bottom': '10mm',
-        'margin-left': '10mm',
-        'margin-right': '10mm'
-    }
-
-    try:
-        pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
-        return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=True)
-    except Exception as e:
-        print(f"Erro ao gerar PDF em lote: {e}")
-        flash("Erro ao gerar PDF em lote.", "danger")
-        return redirect(url_for('main.relatorio'))
-
 
 
 @main.route('/sair')
