@@ -1,6 +1,4 @@
 import os
-import platform
-import pdfkit
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -15,28 +13,6 @@ load_dotenv()
 # Inicializa extensões globais
 db = SQLAlchemy()
 login_manager = LoginManager()
-
-# 📌 Detecta o caminho do wkhtmltopdf para Windows ou Render (Linux)
-if os.environ.get("RENDER"):
-    path_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
-elif platform.system() == "Windows":
-    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-else:
-    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
-
-# Configuração do pdfkit
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-# Opções de formatação
-options = {
-    'enable-local-file-access': '',
-    'page-size': 'A4',
-    'margin-top': '10mm',
-    'margin-right': '5mm',
-    'margin-bottom': '10mm',
-    'margin-left': '5mm',
-    'encoding': 'UTF-8',
-}
 
 def create_app():
     app = Flask(__name__)
