@@ -1,206 +1,217 @@
-{% macro format_text(value) %}
-  {% if value is not none and value != 'None' and value != 'N/A' %}
-    {{ value }}
-  {% else %}
-    {{ '' }}
-  {% endif %}
-{% endmacro %}
-
-{% macro format_currency(value) %}
-  {% if value is not none and value != 0 %}
-    R$ {{ '{:,.2f}'.format(value).replace(',', 'v').replace('.', ',').replace('v', '.') }}
-  {% else %}
-    {{ '' }}
-  {% endif %}
-{% endmacro %}
-
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <style>
-    @page { size: A4; margin: 10mm; }
-    body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; margin: 0; padding: 10px; background-color: #ffffff; }
-    .logo { text-align: left; margin-bottom: 10px; }
-    h3 { font-size: 20px; text-align: center; font-weight: bold; margin-bottom: 15px; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 15px; page-break-inside: avoid; }
-    td, th { border: 1px solid #000; padding: 5px; font-size: 12px; vertical-align: top; }
-    thead td, thead th { background-color: #e9ecef; font-weight: bold; }
-    .bold { font-weight: bold; }
-    .center { text-align: center; }
-    .sub-label { font-size: 12px; font-style: italic; color: #333; }
-    .assinatura td { height: 60px; font-size: 12px; }
-    .page-break { page-break-after: always; }
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      line-height: 1.3;
+      margin: 0;
+      padding: 0;
+      background: white;
+    }
+
+    .logo {
+      text-align: left;
+      margin-bottom: 5px;
+    }
+
+    h3 {
+      font-size: 14px;
+      text-align: center;
+      margin: 5px 0 10px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 4px;
+      font-size: 10px;
+      vertical-align: top;
+    }
+
+    .bold {
+      font-weight: bold;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .left {
+      text-align: left;
+    }
+
+    .col-left {
+      text-align: left;
+    }
+
+    .col-center {
+      text-align: center;
+    }
+
+    .assinatura td {
+      border: 1px solid #000;
+      font-size: 10px;
+      padding: 5px;
+      vertical-align: top;
+    }
+
+    .assinatura-label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .assinatura-linha {
+      display: inline-block;
+      border-bottom: 1px solid #000;
+      width: 65%;
+      margin-left: 5px;
+    }
+
+    .sub-label {
+      font-size: 9px;
+      font-style: italic;
+      color: #333;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
   </style>
 </head>
 <body>
-    {% for r in registros %}
-    <div class="logo-container">
-        <img src="data:image/png;base64,{{ logo_base64 }}" alt="Logo" style="height: 60px;">
 
-    </div>
+{% for r in registros %}
+  <div class="logo">
+    <img src="data:image/png;base64,{{ logo_base64 }}" alt="Logo" style="height: 50px;">
+  </div>
 
-    <h3 class="center">Relatório de Auditoria Hospitalar</h3>
+  <h3>Relatório de Auditoria Hospitalar</h3>
 
-    <table>
-      <tr><td class="bold">Título:</td><td colspan="3">RAH - Relatório de Auditoria Hospitalar</td><td class="bold">Fase:</td><td>Aprovado</td></tr>
-      <tr><td class="bold">Tipo de Anexo:</td><td colspan="5">Registro</td></tr>
-      <tr><td class="bold">Número e Versão do Anexo:</td><td colspan="5">RGQ-0146 - V.0</td></tr>
-    </table>
+  <table>
+    <tr><td class="bold">Título:</td><td colspan="3">RAH - Relatório de Auditoria Hospitalar</td><td class="bold">Fase:</td><td>Aprovado</td></tr>
+    <tr><td class="bold">Tipo de Anexo:</td><td colspan="5">Registro</td></tr>
+    <tr><td class="bold">Número e Versão do Anexo:</td><td colspan="5">RGQ-0146 - V.0</td></tr>
+  </table>
 
-    <table>
-      <tr>
-        <td colspan="2" class="bold">Nome Prestador:<br>{{ format_text(r.nome_prestador) }}</td>
-        <td colspan="2" class="bold">Código Prestador:<br>{{ format_text(r.cod_prestador) }}</td>
-      </tr>
-      <tr>
-        <td colspan="2" class="bold">Nome do Beneficiário:<br>{{ format_text(r.nome_beneficiario) }}</td>
-        <td colspan="2" class="bold">Código Beneficiário:<br>{{ format_text(r.cod_beneficiario) }}</td>
-      </tr>
-      <tr>
-        <td colspan="2" class="bold">Nº guia principal:<br>{{ format_text(r.guia_principal) }}</td>
-        <td colspan="2" class="bold">Data da auditoria:<br>{{ format_text(r.data_auditoria_br) }}</td>
-      </tr>
-      <tr>
-        <td colspan="2" class="bold">Data e hora internação:<br>{{ format_text(r.data_internacao_br) }}</td>
-        <td colspan="2" class="bold">Data e hora alta:<br>{{ format_text(r.data_alta_br) }}</td>
-      </tr>
-      <tr>
-        <td class="bold">Tipo internação:<br>{{ format_text(r.tipo_internacao) }}</td>
-        <td class="bold">Caráter internação:<br>{{ format_text(r.caracter_internacao) }}</td>
-        <td class="bold">Parcial:<br>{{ format_text(r.parcial) }}</td>
-      </tr>
-      <tr>
-        <td colspan="3" class="bold">Período da fatura:<br>{{ format_text(r.fatura_de_br) }} a {{ format_text(r.fatura_ate_br) }}</td>
-      </tr>
-      <tr>
-        <td class="bold">Cód. Proced. principal:<br>{{ format_text(r.cod_procedimento) }}</td>
-        <td class="bold">Descrição procedimento principal:<br>{{ format_text(r.descricao_procedimento) }}</td>
-        <td class="bold">CID diagnóstico principal:<br>{{ format_text(r.cid_codigo) }}</td>
-      </tr>
-    </table>
+  <table>
+    <tr>
+      <td colspan="2"><strong>Nome Prestador:</strong><br>{{ format_text(r.nome_prestador) }}</td>
+      <td colspan="2"><strong>Código Prestador:</strong><br>{{ format_text(r.cod_prestador) }}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Nome do Beneficiário:</strong><br>{{ format_text(r.nome_beneficiario) }}</td>
+      <td colspan="2"><strong>Código Beneficiário:</strong><br>{{ format_text(r.cod_beneficiario) }}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Nº guia principal:</strong><br>{{ format_text(r.guia_principal) }}</td>
+      <td colspan="2"><strong>Data da auditoria:</strong><br>{{ format_text(r.data_auditoria_br) }}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Data e hora internação:</strong><br>{{ format_text(r.data_internacao_br) }}</td>
+      <td colspan="2"><strong>Data e hora alta:</strong><br>{{ format_text(r.data_alta_br) }}</td>
+    </tr>
+    <tr>
+      <td><strong>Tipo internação:</strong><br>{{ format_text(r.tipo_internacao) }}</td>
+      <td><strong>Caráter internação:</strong><br>{{ format_text(r.caracter_internacao) }}</td>
+      <td><strong>Parcial:</strong><br>{{ format_text(r.parcial) }}</td>
+    </tr>
+    <tr>
+      <td colspan="3"><strong>Período da fatura:</strong><br>{{ format_text(r.fatura_de_br) }} a {{ format_text(r.fatura_ate_br) }}</td>
+    </tr>
+    <tr>
+      <td><strong>Cód. Proced. principal:</strong><br>{{ format_text(r.cod_procedimento) }}</td>
+      <td><strong>Descrição procedimento principal:</strong><br>{{ format_text(r.descricao_procedimento) }}</td>
+      <td><strong>CID diagnóstico principal:</strong><br>{{ format_text(r.cid_codigo) }}</td>
+    </tr>
+  </table>
 
-    <table>
-      <thead>
-        <tr class="center bold">
-          <td rowspan="2">Grupo de despesas</td>
-          <td colspan="2">Quantidade (diárias)</td>
-          <td rowspan="2">Valor apresentado (R$)</td>
-          <td rowspan="2">Valor glosa médica (R$)</td>
-          <td rowspan="2">Valor glosa enfermagem (R$)</td>
-          <td rowspan="2">Valor liberado (R$)</td>
-        </tr>
-        <tr class="center bold">
-          <td class="sub-label">Quantidade apresentada</td>
-          <td class="sub-label">Quantidade autorizada</td>
-        </tr>
-      </thead>
-      <tbody>
-      {% for i in range(1, 11) %}
-      <tr class="center">
-        <td>{{ format_text(r['grupo_' ~ i]) }}</td>
-        <td>{{ format_text(r['qtd_apresentada_' ~ i]) }}</td>
-        <td>{{ format_text(r['qtd_autorizada_' ~ i]) }}</td>
-        <td>{{ format_currency(r['valor_apresentado_' ~ i]) }}</td>
-        <td style="color: red">{{ format_currency(r['glosa_medico_' ~ i]) }}</td>
-        <td style="color: red">{{ format_currency(r['glosa_enfermagem_' ~ i]) }}</td>
-        <td>{{ format_currency(r['valor_liberado_' ~ i]) }}</td>
+  <table>
+    <thead>
+      <tr class="center bold">
+        <td rowspan="2">Grupo de despesas</td>
+        <td colspan="2">Quantidade (diárias)</td>
+        <td rowspan="2">Valor apresentado (R$)</td>
+        <td rowspan="2">Valor glosa médica (R$)</td>
+        <td rowspan="2">Valor glosa enfermagem (R$)</td>
+        <td rowspan="2">Valor liberado (R$)</td>
       </tr>
-      {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr class="center bold">
-          <td colspan="3">TOTAL</td>
-          <td>{{ format_currency(r.total_apresentado) }}</td>
-          <td style="color: red">{{ format_currency(r.total_glosa_medico) }}</td>
-          <td style="color: red">{{ format_currency(r.total_glosa_enfermagem) }}</td>
-          <td>{{ format_currency(r.total_liberado) }}</td>
-        </tr>
-      </tfoot>
-    </table>
+      <tr class="center bold">
+        <td class="sub-label">Quantidade apresentada</td>
+        <td class="sub-label">Quantidade autorizada</td>
+      </tr>
+    </thead>
+    <tbody>
+    {% for i in range(1, 11) %}
+      {% set grupo = r['grupo_' ~ i] %}
+      {% set qtd_apresentada = r['qtd_apresentada_' ~ i] %}
+      {% set qtd_autorizada = r['qtd_autorizada_' ~ i] %}
+      {% set va = r['valor_apresentado_' ~ i] %}
+      {% set gm = r['glosa_medico_' ~ i] %}
+      {% set ge = r['glosa_enfermagem_' ~ i] %}
+      {% set vl = r['valor_liberado_' ~ i] %}
 
-    <p><strong>* N/A - Não se aplica:</strong></p>
-
-    <table class="assinatura">
+      {% if grupo or va or gm or ge or vl or qtd_apresentada or qtd_autorizada %}
       <tr>
-        <td>
-          <strong>De acordo Auditoria/Faturamento Prestador:</strong><br><br>
-          <br><br><br><br><br><br>
-          Data: {{ format_text(r.data_registro_br) }}<br>
-          Assinatura e carimbo: ___________________________________________<br>
-        </td>
-        <td>
-          <strong>Auditoria Operadora:</strong><br>
-          Data: {{ format_text(r.data_registro_br) }}<br>
-          Médico Auditor:<br>
-          Assinatura e carimbo: ___________________________________________<br><br><br><br><br>
-          Enfermeiro Auditor:<br>
-          Assinatura e carimbo: ___________________________________________<br>
-        </td>
+        <td class="col-left">{{ format_text(grupo) }}</td>
+        <td class="col-center">{{ format_qtd(qtd_apresentada) }}</td>
+        <td class="col-center">{{ format_qtd(qtd_autorizada) }}</td>
+        <td class="col-left">{{ format_currency(va) }}</td>
+        <td class="col-left" style="color: red">{{ format_currency(gm) }}</td>
+        <td class="col-left" style="color: red">{{ format_currency(ge) }}</td>
+        <td class="col-left">{{ format_currency(vl) }}</td>
       </tr>
-    </table>
-
-    {% if not loop.last %}<div class="page-break"></div>{% endif %}
+      {% endif %}
     {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="bold center">
+        <td colspan="3">TOTAL</td>
+        <td>{{ format_currency(r.total_apresentado) }}</td>
+        <td style="color: red">{{ format_currency(r.total_glosa_medico) }}</td>
+        <td style="color: red">{{ format_currency(r.total_glosa_enfermagem) }}</td>
+        <td>{{ format_currency(r.total_liberado) }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p><strong>* N/A - Não se aplica</strong></p>
+
+  <table class="assinatura">
+  <tr>
+    <td>
+      <strong>De acordo Auditoria/Faturamento Prestador:</strong><br>
+      Data: {{ format_text(r.data_registro_br) }}<br><br>
+      Assinatura e carimbo: ________________________________
+    </td>
+    <td>
+      <strong>Auditoria Operadora:</strong><br>
+      Data: {{ format_text(r.data_registro_br) }}<br>
+      Médico Auditor:<br>
+      Assinatura e carimbo: ________________________________<br><br><br><br>
+      Enfermeiro Auditor:<br>
+      Assinatura e carimbo: ________________________________
+    </td>
+  </tr>
+</table>
+
+
+  {% if not loop.last %}<div class="page-break"></div>{% endif %}
+{% endfor %}
+
 </body>
 </html>
-<style>
-  @page {
-    size: A4;
-    margin: 10mm;
-  }
-
-  body {
-    font-family: Arial, sans-serif;
-    font-size: 10px;
-    margin: 0;
-    padding: 0;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    page-break-inside: avoid;
-  }
-
-  th, td {
-    padding: 3px;
-    font-size: 9px;
-    border: 1px solid #000;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  h3 {
-    font-size: 14px;
-    text-align: center;
-    margin: 10px 0;
-  }
-
-  .assinaturas {
-    page-break-inside: avoid;
-    margin-top: 10px;
-  }
-
-  .assinaturas td {
-    border: none;
-    font-size: 9px;
-  }
-
-  .logo {
-    height: 60px;
-    margin-bottom: 10px;
-  }
-
-  .total {
-    font-weight: bold;
-  }
-
-  .center {
-    text-align: center;
-  }
-
-  .vermelho {
-    color: red;
-    font-weight: bold;
-  }
-</style>
