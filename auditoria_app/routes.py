@@ -9,6 +9,7 @@ import locale
 from weasyprint import HTML
 import gspread
 from google.oauth2.service_account import Credentials
+from flask import make_response
 
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
