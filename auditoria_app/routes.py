@@ -400,9 +400,13 @@ def imprimir(id):
 
     html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
 
-    # Usa a configuração global importada de __init__.py
-    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
-    return send_file(BytesIO(pdf), download_name="relatorio.pdf", as_attachment=False)
+   # Define o caminho correto para o Render
+if platform.system() == "Windows":
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'  # Caminho padrão no Linux e no Render
+
+pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
 @main.route('/formulario/primeiro')
 @login_required
