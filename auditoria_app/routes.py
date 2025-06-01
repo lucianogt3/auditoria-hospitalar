@@ -354,6 +354,11 @@ def editar(id):
 @main.route('/imprimir/<int:id>')
 @login_required
 def imprimir(id):
+    import platform
+    import pdfkit
+    from io import BytesIO
+    from flask import send_file, render_template
+
     r = Auditoria.query.get_or_404(id)
 
     def parse_data(data, fmt='%Y-%m-%d'):
@@ -381,12 +386,18 @@ def imprimir(id):
         gm = getattr(r, f'glosa_medico_{i}', None) or 0
         ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
 
-        try: va = float(va)
-        except: va = 0
-        try: gm = float(gm)
-        except: gm = 0
-        try: ge = float(ge)
-        except: ge = 0
+        try:
+            va = float(va)
+        except:
+            va = 0
+        try:
+            gm = float(gm)
+        except:
+            gm = 0
+        try:
+            ge = float(ge)
+        except:
+            ge = 0
 
         vl = va - gm - ge
         setattr(r, f'valor_liberado_{i}', vl)
@@ -397,16 +408,33 @@ def imprimir(id):
         r.total_liberado += vl
 
     logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
-
     html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
 
-   # Define o caminho correto para o Render
-if platform.system() == "Windows":
-    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-else:
-    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'  # Caminho padrão no Linux e no Render
+    # Configuração do caminho do wkhtmltopdf
+    if platform.system() == "Windows":
+        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    else:
+        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
 
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
+    # Opções do PDF
+    options = {
+        'enable-local-file-access': None,
+        'page-size': 'A4',
+        'margin-top': '10mm',
+        'margin-bottom': '10mm',
+        'margin-left': '10mm',
+        'margin-right': '10mm'
+    }
+
+    try:
+        pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
+        return send_file(BytesIO(pdf), download_name="auditoria.pdf", as_attachment=True)
+    except Exception as e:
+        print(f"Erro ao gerar PDF: {e}")
+        return f"Erro ao gerar PDF: {e}", 500
+
 
 @main.route('/formulario/primeiro')
 @login_required
@@ -589,6 +617,11 @@ def listar_auditores():
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
+    import platform
+    import pdfkit
+    from io import BytesIO
+    from flask import request, flash, redirect, url_for, render_template, send_file
+
     ids_param = request.args.get('ids')
     if not ids_param:
         flash("Nenhum ID informado para impressão.", "warning")
@@ -650,9 +683,30 @@ def imprimir_lote():
     logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
     html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
-    # Usa a configuração global importada de __init__.py
-    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
-    return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
+    # Caminho do wkhtmltopdf para Render ou local
+    if platform.system() == "Windows":
+        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    else:
+        path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+    pdfkit_config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+    options = {
+        'enable-local-file-access': None,
+        'page-size': 'A4',
+        'margin-top': '10mm',
+        'margin-bottom': '10mm',
+        'margin-left': '10mm',
+        'margin-right': '10mm'
+    }
+
+    try:
+        pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
+        return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=True)
+    except Exception as e:
+        print(f"Erro ao gerar PDF em lote: {e}")
+        flash("Erro ao gerar PDF em lote.", "danger")
+        return redirect(url_for('main.relatorio'))
+
 
 
 @main.route('/sair')
