@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify, current_app
 from flask_login import login_required, current_user, logout_user
 from .models import Auditoria, Prestador, Auditor
 from . import db
@@ -10,7 +10,7 @@ from weasyprint import HTML
 import gspread
 from google.oauth2.service_account import Credentials
 from flask import make_response
-
+import base64
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 except locale.Error:
@@ -373,23 +373,39 @@ def imprimir(id):
     r.total_liberado = 0
 
     for i in range(1, 11):
-        va = float(getattr(r, f'valor_apresentado_{i}', 0) or 0)
-        gm = float(getattr(r, f'glosa_medico_{i}', 0) or 0)
-        ge = float(getattr(r, f'glosa_enfermagem_{i}', 0) or 0)
+        va = getattr(r, f'valor_apresentado_{i}', None) or 0
+        gm = getattr(r, f'glosa_medico_{i}', None) or 0
+        ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+        try: va = float(va)
+        except: va = 0
+        try: gm = float(gm)
+        except: gm = 0
+        try: ge = float(ge)
+        except: ge = 0
+
         vl = va - gm - ge
         setattr(r, f'valor_liberado_{i}', vl)
+
         r.total_apresentado += va
         r.total_glosa_medico += gm
         r.total_glosa_enfermagem += ge
         r.total_liberado += vl
 
-    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
-    html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
+    # ✅ Carrega logo como base64
+    caminho_logo = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
+    with open(caminho_logo, 'rb') as f:
+        logo_base64 = base64.b64encode(f.read()).decode('utf-8')
 
-    pdf = HTML(string=html).write_pdf()
+    # ✅ Gera HTML
+    html = render_template('pdf_individual.html', r=r, logo_base64=logo_base64)
+
+    # ✅ Gera PDF com base_url para suportar CSS local
+    pdf = HTML(string=html, base_url=request.host_url).write_pdf()
+
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'inline; filename="{r.nome_beneficiario or "relatorio"}.pdf"'
+    response.headers['Content-Disposition'] = f'inline; filename={r.nome_beneficiario or "relatorio"}.pdf'
     return response
 
 @main.route('/imprimir-lote')
@@ -433,25 +449,38 @@ def imprimir_lote():
         r.total_liberado = 0
 
         for i in range(1, 11):
-            va = float(getattr(r, f'valor_apresentado_{i}', 0) or 0)
-            gm = float(getattr(r, f'glosa_medico_{i}', 0) or 0)
-            ge = float(getattr(r, f'glosa_enfermagem_{i}', 0) or 0)
+            va = getattr(r, f'valor_apresentado_{i}', None) or 0
+            gm = getattr(r, f'glosa_medico_{i}', None) or 0
+            ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+            try: va = float(va)
+            except: va = 0
+            try: gm = float(gm)
+            except: gm = 0
+            try: ge = float(ge)
+            except: ge = 0
+
             vl = va - gm - ge
             setattr(r, f'valor_liberado_{i}', vl)
+
             r.total_apresentado += va
             r.total_glosa_medico += gm
             r.total_glosa_enfermagem += ge
             r.total_liberado += vl
 
-    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
-    html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
+    # ✅ Logo como base64
+    caminho_logo = os.path.join(current_app.root_path, 'static', 'img', 'logo_ipasgo.png')
+    with open(caminho_logo, 'rb') as f:
+        logo_base64 = base64.b64encode(f.read()).decode('utf-8')
 
-    pdf = HTML(string=html).write_pdf()
+    html = render_template('pdf_lote.html', registros=registros, logo_base64=logo_base64)
+
+    pdf = HTML(string=html, base_url=request.host_url).write_pdf()
+
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'inline; filename="lote_auditoria.pdf"'
+    response.headers['Content-Disposition'] = 'inline; filename=lote_auditoria.pdf'
     return response
-
 
 @main.route('/formulario/primeiro')
 @login_required
