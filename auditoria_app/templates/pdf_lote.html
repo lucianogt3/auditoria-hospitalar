@@ -143,3 +143,64 @@
     {% endfor %}
 </body>
 </html>
+<style>
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+    margin: 0;
+    padding: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    padding: 3px;
+    font-size: 9px;
+    border: 1px solid #000;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  h3 {
+    font-size: 14px;
+    text-align: center;
+    margin: 10px 0;
+  }
+
+  .assinaturas {
+    page-break-inside: avoid;
+    margin-top: 10px;
+  }
+
+  .assinaturas td {
+    border: none;
+    font-size: 9px;
+  }
+
+  .logo {
+    height: 60px;
+    margin-bottom: 10px;
+  }
+
+  .total {
+    font-weight: bold;
+  }
+
+  .center {
+    text-align: center;
+  }
+
+  .vermelho {
+    color: red;
+    font-weight: bold;
+  }
+</style>
