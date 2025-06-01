@@ -9,3 +9,6 @@ services:
     autoDeploy: true
     buildCommand: ./render-build.sh && pip install -r requirements.txt
     startCommand: gunicorn auditoria_app:app --timeout 120 # Adicionado --timeout 120
+    envVars:
+  - key: RENDER
+    value: "1"

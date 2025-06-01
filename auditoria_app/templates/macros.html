@@ -1,0 +1,23 @@
+{% macro format_currency(value) %}
+  {% if value is not none and value != 0 %}
+    R$ {{ '{:,.2f}'.format(value).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+  {% else %}
+    
+  {% endif %}
+{% endmacro %}
+
+{% macro format_qtd(value) %}
+  {% if value not in [None, 0, 'None', 'N/A', '', '0'] %}
+    {{ value }}
+  {% else %}
+    
+  {% endif %}
+{% endmacro %}
+
+{% macro format_text(value) %}
+  {% if value not in [None, 'None', 'N/A', '', '0'] %}
+    {{ value }}
+  {% else %}
+    
+  {% endif %}
+{% endmacro %}

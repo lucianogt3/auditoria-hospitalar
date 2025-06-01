@@ -1,0 +1,42 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<h3>Novo Registro de Auditoria</h3>
+<form method="POST" action="/salvar">
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Prestador</label>
+      <select name="nome_prestador" class="form-select" onchange="buscarCodigo(this.value)">
+        <option value="">Selecione</option>
+        <option value="Hospital Vida">Hospital Vida</option>
+        <option value="Clínica Esperança">Clínica Esperança</option>
+        <option value="Instituto Saúde">Instituto Saúde</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Código Prestador</label>
+      <input type="text" id="cod_prestador" name="cod_prestador" class="form-control" readonly>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Nome do Beneficiário</label>
+    <input type="text" name="nome_beneficiario" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">CID</label>
+    <input type="text" name="cid" class="form-control">
+  </div>
+  <button type="submit" class="btn btn-primary">💾 Salvar Registro</button>
+</form>
+
+<script>
+  function buscarCodigo(nome) {
+    const codigos = {
+      "Hospital Vida": "H001",
+      "Clínica Esperança": "C002",
+      "Instituto Saúde": "I003"
+    };
+    document.getElementById("cod_prestador").value = codigos[nome] || "";
+  }
+</script>
+{% endblock %}
