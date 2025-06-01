@@ -351,6 +351,59 @@ def editar(id):
 
     
     return render_template('formulario.html', registro=registro, grupos_despesa=grupos_despesa, modo='editar')
+
+@main.route('/imprimir/<int:id>')
+@login_required
+def imprimir(id):
+    r = Auditoria.query.get_or_404(id)
+
+    def parse_data(data, fmt='%d/%m/%Y'):
+        if not data:
+            return ''
+        try:
+            return data.strftime(fmt)
+        except Exception:
+            return ''
+
+    r.data_auditoria_br = parse_data(r.data_auditoria)
+    r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
+    r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
+    r.fatura_de_br = parse_data(r.fatura_de)
+    r.fatura_ate_br = parse_data(r.fatura_ate)
+    r.data_registro_br = parse_data(r.data_registro)
+
+    r.total_apresentado = 0
+    r.total_glosa_medico = 0
+    r.total_glosa_enfermagem = 0
+    r.total_liberado = 0
+
+    for i in range(1, 11):
+        va = getattr(r, f'valor_apresentado_{i}', None) or 0
+        gm = getattr(r, f'glosa_medico_{i}', None) or 0
+        ge = getattr(r, f'glosa_enfermagem_{i}', None) or 0
+
+        try: va = float(va)
+        except: va = 0
+        try: gm = float(gm)
+        except: gm = 0
+        try: ge = float(ge)
+        except: ge = 0
+
+        vl = va - gm - ge
+        setattr(r, f'valor_liberado_{i}', vl)
+
+        r.total_apresentado += va
+        r.total_glosa_medico += gm
+        r.total_glosa_enfermagem += ge
+        r.total_liberado += vl
+
+    logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
+    html = render_template('pdf_individual.html', r=r, logo_url=logo_url)
+
+    pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
+    return send_file(BytesIO(pdf), download_name=f"{r.nome_beneficiario or 'relatorio'}.pdf", as_attachment=False)
+
+
 @main.route('/imprimir-lote')
 @login_required
 def imprimir_lote():
@@ -366,20 +419,19 @@ def imprimir_lote():
         return redirect(url_for('main.relatorio'))
 
     registros = Auditoria.query.filter(Auditoria.id.in_(ids)).all()
-
     if not registros:
         flash("Nenhum registro encontrado para os IDs informados.", "info")
         return redirect(url_for('main.relatorio'))
 
-    for r in registros:
-        def parse_data(data, fmt='%d/%m/%Y'):
-            if not data:
-                return ''
-            try:
-                return data.strftime(fmt)
-            except Exception:
-                return ''
+    def parse_data(data, fmt='%d/%m/%Y'):
+        if not data:
+            return ''
+        try:
+            return data.strftime(fmt)
+        except Exception:
+            return ''
 
+    for r in registros:
         r.data_auditoria_br = parse_data(r.data_auditoria)
         r.data_internacao_br = parse_data(r.data_internacao, '%d/%m/%Y %H:%M')
         r.data_alta_br = parse_data(r.data_alta, '%d/%m/%Y %H:%M')
@@ -415,18 +467,8 @@ def imprimir_lote():
     logo_url = "https://www.nurseauditoria.com.br/static/img/logo_ipasgo.png"
     html = render_template('pdf_lote.html', registros=registros, logo_url=logo_url)
 
-    options = {
-        'page-size': 'A4',
-        'encoding': 'UTF-8',
-        'no-outline': None,
-        'quiet': '',
-        'enable-local-file-access': '',
-        'load-error-handling': 'ignore'
-    }
-
     pdf = pdfkit.from_string(html, False, configuration=pdfkit_config, options=options)
     return send_file(BytesIO(pdf), download_name="lote_auditoria.pdf", as_attachment=False)
-
 
 @main.route('/formulario/primeiro')
 @login_required
